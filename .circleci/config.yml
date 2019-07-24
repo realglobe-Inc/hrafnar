@@ -1,0 +1,37 @@
+version: 2
+
+jobs:
+
+  test:
+    docker:
+      - image: haskell:8.6.5
+    steps:
+      - checkout
+      - setup_remote_docker
+      - restore_cache:
+          name: Restore cache
+          keys:
+            - lts-13.14-{{ checksum "package.yaml" }}
+      - run:
+          name: Install packages
+          command: |
+            apt update
+            apt install -y libgmp-dev libpq-dev libtinfo-dev
+            stack install hlint alex happy --system-ghc
+      - run:
+          name: Run tests
+          command: |
+            hlint .
+            stack --no-terminal test --system-ghc
+      - save_cache:
+          name: Save packagess
+          key: lts-13.14-{{ checksum "package.yaml" }}
+          paths:
+            - /usr/lib/ghc/
+            - ~/.stack/
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test

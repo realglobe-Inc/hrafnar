@@ -1,0 +1,128 @@
+name:                hrafnar
+version:             0.1.0.0
+github:              "realglobe-Inc/hrafnar"
+license:             BSD3
+author:              "REALGLOBE INC"
+maintainer:          "info@realglobe.com"
+copyright:           "2018 REALGLOBE INC"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+description:         Please see the README on GitHub at <https://github.com/realglobe-Inc/hrafnar#readme>
+
+library:
+  source-dirs: server
+
+dependencies:
+- base >= 4.7 && < 5
+
+- aeson
+- array
+- async
+- directory
+- file-embed
+- filepath
+- extensible
+- http-client
+- http-client-tls
+- http-media
+- http-types
+- lens
+- mtl
+- network
+- network-simple
+- network-simple-tls
+- path
+- path-io
+- reflection
+- safe-exceptions
+- text
+- scientific
+- scotty
+- servant
+- servant-server
+- stm
+- time
+- tls
+- transformers
+- containers
+- ulid
+- unix-time
+- utf8-string
+- x509-store
+- wai
+- wai-cors
+- warp
+- yaml
+
+# Chore temporary
+- process
+- bytestring
+- unordered-containers
+- vector
+
+default-extensions:
+- DataKinds
+- ConstraintKinds
+- ExistentialQuantification
+- FlexibleContexts
+- FlexibleInstances
+- KindSignatures
+- LambdaCase
+- MultiParamTypeClasses
+- OverloadedLabels
+- OverloadedStrings
+- RankNTypes
+- RecordWildCards
+- PolyKinds
+- ScopedTypeVariables
+- TupleSections
+- TypeApplications
+- TypeFamilies
+- TypeOperators
+- TypeSynonymInstances
+
+executables:
+  hrafnar:
+    main:                Main.hs
+    source-dirs:         server-exec
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -optP-Wno-nonportable-include-path
+    dependencies:
+    - hrafnar
+    - optparse-applicative
+
+  hmli:
+    main:                Main.hs
+    source-dirs:         repl
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -optP-Wno-nonportable-include-path
+    dependencies:
+    - hrafnar
+    - haskeline
+    - optparse-applicative
+
+
+tests:
+  hrafnar-test:
+    main:                Main.hs
+    source-dirs:         server-test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - hrafnar
+    - hspec
+    - hspec-wai
+    - smallcheck-series
+    - case-insensitive
+    - wai-extra

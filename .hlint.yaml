@@ -1,0 +1,21 @@
+- warn:
+    name: Use explicit module export list
+- ignore:
+    name: Use .
+- ignore:
+    name: Reduce duplication
+- ignore:
+    name: Parse error
+
+- modules: {name: Data.Map.Strict, as: MA}
+- modules: {name: Data.ByteString, as: SBS}
+- modules: {name: Data.ByteString.Lazy, as: LBS}
+- modules: {name: Network.Simple.TCP, as: STCP}
+- modules: {name: Network.Simple.TCP.TLS, as: STLS}
+- modules: {name: Data.Map.Strict, as: MA}
+- modules: {name: Data.Map.Strict, as: MA}
+- modules: {name: Data.Map.Strict, as: MA}
+- modules: {name: Data.Map.Strict, as: MA}
+
+- group: {name: dollar, enabled: true}
+- group: {name: generalise, enabled: true}

@@ -1,0 +1,18 @@
+resolver: lts-13.22
+
+packages:
+- .
+
+extra-deps:
+- extensible-0.5
+- ulid-0.2.0.0
+- crockford-0.2
+- github: k0001/network-simple-tls
+  commit: c38e6f04436851ec4bae4153f65a8a80d3c74422
+- fast-builder-0.1.0.0@sha256:a7a8f4de793c98424a8c92c806346692d8dc4f2cd6a284fbff1a0c88eac41814
+- winery-1.0.1
+- req-2.0.1@sha256:a677b3cb7534e101d2af86e6d12ae94cec57067314763fd2c89a6bc51a6d2fab
+- retry-0.8.0.0@sha256:319a0586876d43622bfe9406fad067adf0b4e591d125ad960bcc405237cc28f5
+- smallcheck-series-0.6.1
+# ghc-options:
+  # hrafnar: -Wall -Werror

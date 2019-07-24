@@ -1,0 +1,26 @@
+# Haskell files
+*/.stack-work/
+.stack-work/
+*.cabal
+
+# IntelliJ files
+*.iml
+.idea
+
+# emacs
+.dir-locals.el
+TAGS
+
+#.env files
+*.env
+
+# mac
+.DS_Store
+
+# elm
+node_modules/
+elm-stuff/
+dist/
+
+# hrafnar
+hrafnar-projects/

@@ -4,20 +4,26 @@ jobs:
 
   test:
     docker:
-      - image: haskell:8.6.5
+      - image: realglobe/haskell-nodejs:8.6.5-11
     steps:
       - checkout
       - setup_remote_docker
       - restore_cache:
           name: Restore cache
           keys:
-            - lts-13.14-{{ checksum "package.yaml" }}
+            - lts-13.22-{{ checksum "package.yaml" }}-{{ checksum "package.json" }}
       - run:
           name: Install packages
           command: |
             apt update
             apt install -y libgmp-dev libpq-dev libtinfo-dev
             stack install hlint alex happy --system-ghc
+            npm i
+      - run:
+          name: Build client
+          command: |
+            npx webpack
+
       - run:
           name: Run tests
           command: |
@@ -25,10 +31,11 @@ jobs:
             stack --no-terminal test --system-ghc
       - save_cache:
           name: Save packagess
-          key: lts-13.14-{{ checksum "package.yaml" }}
+          key: lts-13.22-{{ checksum "package.yaml" }}-{{ checksum "package.json" }}
           paths:
             - /usr/lib/ghc/
             - ~/.stack/
+            - ./node_modules
 
 workflows:
   version: 2

@@ -4,7 +4,7 @@ jobs:
 
   test:
     docker:
-      - image: realglobe/haskell-nodeje:8.6.5-11
+      - image: realglobe/haskell-nodejs:8.6.5-11
     steps:
       - checkout
       - setup_remote_docker

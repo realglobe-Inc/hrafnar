@@ -121,7 +121,7 @@ instance MimeRender HTML LBS.ByteString where
 
 
 indexHtml :: Servant.Handler LBS.ByteString
-indexHtml = pure $ LBS.fromStrict "" -- $(embedFile "./dist/index.html")
+indexHtml = pure $ LBS.fromStrict $(embedFile "./dist/index.html")
 
 -- main.js
 data JS
@@ -134,7 +134,7 @@ instance MimeRender JS LBS.ByteString where
 
 
 mainJS :: Servant.Handler LBS.ByteString
-mainJS = pure $ LBS.fromStrict "" -- $(embedFile "./dist/main.js")
+mainJS = pure $ LBS.fromStrict $(embedFile "./dist/main.js")
 
 -- bundle APIs and static files serving
 -- | bundled API

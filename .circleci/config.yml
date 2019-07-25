@@ -36,7 +36,6 @@ jobs:
             - /usr/lib/ghc/
             - ~/.stack/
             - ./node_modules
-            - ./elm-stuff
 
 workflows:
   version: 2

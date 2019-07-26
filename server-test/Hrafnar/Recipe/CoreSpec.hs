@@ -67,6 +67,18 @@ spec = do
     it "partial applying 2" $
       ev "f = add 0; g = eq 1; main = g 2" `shouldBe` VBool False
 
+  describe "data constructor" $ do
+    it "nullary" $
+      ev "main = T; data B = T | F" `shouldBe` VCon "T" []
+
+    it "unary" $
+      ev "main = Cons 0; data Wrap = Cons Int" `shouldBe` VCon "Cons" [VInt 0]
+
+    it "binary" $
+      ev "main = Cons 0 1; data Wrap = Cons Int Int" `shouldBe` VCon "Cons" [VInt 0, VInt 1]
+
+    it "partial application" $
+      ev "main = Cons 0; data Wrap = Cons Int Int" `shouldBe` VCon "Cons" [VInt 0]
 
   describe "evalMain" $
     it "declaration order does not matter" $

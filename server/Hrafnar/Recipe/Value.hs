@@ -20,7 +20,6 @@ import           Hrafnar.Recipe.Types
 import           Control.Applicative
 import           System.IO.Unsafe     (unsafePerformIO)
 
-
 -- | Value after compiling @Exp@
 data Value
   = VBool Bool
@@ -30,7 +29,7 @@ data Value
   | VTuple [Value]
   | VList [Value]
   | VVar String
-  | VCon Name
+  | VCon Name [Value]
   | VApp Value Value
   | VLam (Value -> Value)
   | VEff (Effect Event)
@@ -55,6 +54,7 @@ instance Eq Value where
   VTuple vs == VTuple vs' = vs == vs'
   VVar n == VVar n' = n == n'
   VApp f arg == VApp _ arg' = f == f && arg == arg'
+  VCon n vs == VCon n' vs' = n == n' && vs == vs'
   _ == _ = False
 
 instance Show Value where
@@ -65,7 +65,7 @@ instance Show Value where
   show (VTuple vs) = show vs
   show (VList ls)  = show ls
   show (VVar n)    = "variable " <> show n
-  show (VCon n)    = "data constructor " <> n
+  show (VCon n vs) = n <> " " <> unwords (fmap show vs)
   show VApp{}      = "<<application>>"
   show VLam{}      = "<<function>>"
   show VEff{}      = "<<effect>>"

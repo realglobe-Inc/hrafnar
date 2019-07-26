@@ -42,7 +42,6 @@ import           Control.Lens              hiding (Const, Context, List)
 import           Control.Monad.RWS
 import           Data.Extensible           hiding (State)
 import qualified Data.Map                  as MA
-
 --import           Debug.Trace
 
 type Recipe = Record
@@ -115,6 +114,9 @@ compile (At _ expr) = compile' expr
     compileLit _            = throw FailCompileLit
 
 
+compileData :: DataDecl -> [(Name, Value)]
+compileData (_, (_, conss)) = fmap (\(n, _) -> (n, VCon n [])) conss
+
 abstract :: Name -> Value -> Value
 abstract x (VApp fun arg) =  combS (abstract x fun) (abstract x arg)
 abstract x (VVar n)       | x == n = combI
@@ -139,6 +141,11 @@ _ ! _ = undefined
 
 -- | replace variable with value
 link :: Value -> Eval Value
+link (VApp var@VVar{} arg) = liftA2 VApp (link var) (link arg) >>= link
+link (VApp (VCon n vs) arg) = do
+  arg' <- link arg
+  pure $ VCon n (vs <> [arg'])
+link (VApp app@VApp{} arg) = liftA2 VApp (link app) (link arg) >>= link
 link (VApp fun arg) = liftA2 (!) (link fun) (link arg)
 link (VVar name) = MA.lookup name <$> gets (view #venv) >>= \case
   Just v -> link v
@@ -156,7 +163,10 @@ evalMain :: [Decl] -> Eval Value
 evalMain decls = do
   values <- MA.fromList <$> traverse (\(n, e) -> compile e >>= pure . (n,)) (extractExprs decls)
   vars <- gets $ view #venv
-  modify $ #venv .~ MA.union vars values
+  let dataDecls = extractData decls
+      dataEnv = MA.fromList . join $ fmap compileData dataDecls
+  modify $ #venv .~ MA.unions [vars, values, dataEnv]
+
   case MA.lookup "main" values of
     Just v  -> link v
     Nothing -> throw $ VariableNotDeclared "main"

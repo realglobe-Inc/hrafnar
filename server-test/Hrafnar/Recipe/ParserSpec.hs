@@ -125,7 +125,6 @@ spec = do
 
 
   describe "data constructor" $ do
-
     it "basic" $
       runAlex "data Hoge = Foo | Bar" declParser
       `shouldBe`

@@ -106,6 +106,7 @@ compile (At _ expr) = compile' expr
       Do exps -> traverse compile exps >>= \case
         [] -> pure $ VTuple []
         xs -> pure $ last xs
+      Case expr pats -> liftA2 VCase (compile expr) (traverse compilePat pats)
 
     compileLit :: Lit -> Eval Value
     compileLit (Bool b)     = pure $ VBool b
@@ -116,6 +117,20 @@ compile (At _ expr) = compile' expr
 
 compileData :: DataDecl -> [(Name, Value)]
 compileData (_, (_, conss)) = fmap (\(n, _) -> (n, VCon n [])) conss
+
+compilePat :: (Pat, Expr) -> Eval (VPat, Value)
+compilePat (pat, expr) = compilePat' pat >>= makePair
+  where
+    makePair vp = do
+      v <- compile expr
+      pure (vp, v)
+
+    compilePat' (At _ pat) = case pat of
+      PVar n       -> pure $ VPVar n
+      PLit (Int i) -> pure $ VPInt i
+      PCon n pats  -> VPCon n <$> traverse compilePat' pats
+
+
 
 abstract :: Name -> Value -> Value
 abstract x (VApp fun arg) =  combS (abstract x fun) (abstract x arg)
@@ -153,7 +168,20 @@ link (VVar name) = MA.lookup name <$> gets (view #venv) >>= \case
 link (VEff ef) = do
   tell $ Endo (\(c, efs) -> (c, ef : efs))
   pure $ VTuple []
+link (VCase v pats) = do
+  v' <- link v
+  consumePats v' pats
 link e = pure e
+
+consumePats :: Value -> [(VPat, Value)] -> Eval Value
+consumePats _ [] = throwString "There is no matched pattern" -- temp error
+consumePats value ((pat, patv):xs) = case pat of
+  VPVar n                   -> link (VApp (abstract n patv) value)
+  VPInt i | VInt i == value -> link patv
+  VPWildcard                -> link patv
+  _                         -> consumePats value xs
+
+
 
 evalExpr :: Expr -> Eval Value
 evalExpr expr = compile expr >>= link

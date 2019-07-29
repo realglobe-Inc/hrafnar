@@ -80,6 +80,15 @@ spec = do
     it "partial application" $
       ev "main = Cons 0; data Wrap = Cons Int Int" `shouldBe` VCon "Cons" [VInt 0]
 
+  describe "case" $ do
+    it "variable" $
+      ev "main = case x of { y -> y }; x = 0" `shouldBe` VInt 0
+    it "first branch" $
+      ev "main = case x of { 1 -> 2; 2 -> 4}; x = 1" `shouldBe` VInt 2
+    it "second branch" $
+      ev "main = case x of { 1 -> 2; 2 -> 4}; x = 2" `shouldBe` VInt 4
+
+
   describe "evalMain" $
     it "declaration order does not matter" $
       ev "main = f 2; f = add 0" `shouldBe` VInt 2

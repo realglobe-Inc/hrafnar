@@ -7,6 +7,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Maybe
 import Page.Editor as Editor
+import Page.Index as Index
 import Url exposing (Url)
 import Url.Parser as UP exposing ((</>), Parser)
 
@@ -31,7 +32,7 @@ type alias Model =
 
 
 type Route
-    = Index
+    = Index Index.Model
     | Editor Editor.Model
     | NotFound
 
@@ -45,6 +46,7 @@ type Msg
     = Link UrlRequest
     | UrlChanged Url
     | EditorMsg Editor.Msg
+    | IndexMsg Index.Msg
     | NoOp
 
 
@@ -62,7 +64,7 @@ stepUrl url model =
     let
         parser =
             UP.oneOf
-                [ UP.map ( { model | route = Index }, Cmd.none ) UP.top
+                [ UP.map (stepIndex model <| Index.init) UP.top
                 , UP.map (stepEditor model <| Editor.init) (UP.s "editor")
                 ]
     in
@@ -73,6 +75,10 @@ stepUrl url model =
 stepEditor : Model -> ( Editor.Model, Cmd Editor.Msg ) -> ( Model, Cmd Msg )
 stepEditor model ( model_, cmd ) =
     ( { model | route = Editor model_ }, Cmd.map EditorMsg cmd )
+
+stepIndex : Model -> ( Index.Model, Cmd Index.Msg ) -> ( Model, Cmd Msg )
+stepIndex model ( model_, cmd ) =
+    ( { model | route = Index model_ }, Cmd.map IndexMsg cmd )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -96,6 +102,9 @@ update msg model =
         ( EditorMsg msg_, Editor model_ ) ->
             stepEditor model <| Editor.update model_ msg_
 
+        ( IndexMsg msg_, Index model_ ) ->
+            stepIndex model <| Index.update model_ msg_
+
         _ ->
             ( model
             , Cmd.none
@@ -109,30 +118,37 @@ subscriptions model =
 
 view : Model -> Document Msg
 view model =
-    { title = "Realglobe"
+    { title = "Hrafnar"
     , body =
-        [ div [ class "container" ]
-            [ case model.route of
-                Index ->
-                    index model
+        [ div [ classList [ ("container", True)
+                          , ("ravens-are-in-odins-service", True)
+                          ]
+              ]
+              [ navigation model
+              , case model.route of
+                    Index model_ ->
+                        Html.map IndexMsg <| Index.view model_
 
-                Editor model_ ->
-                    Html.map EditorMsg <| Editor.view model_
+                    Editor model_ ->
+                        Html.map EditorMsg <| Editor.view model_
 
-                NotFound ->
-                    notFound model
-            ]
+                    NotFound ->
+                        notFound model
+              ]
         ]
     }
 
-
-index : Model -> Html Msg
-index model =
-    div []
-        [ h1 [] [ text "index" ]
-        , a [ href "/editor" ] [ text "go to editor" ]
+navigation : Model -> Html Msg
+navigation model =
+    div [ class "navigation" ]
+        [ h1 [] [ text "HRAFNAR" ]
+        , ul []
+            [ li [] [ text "Dashboard" ]
+            , li [] [ text "Project" ]
+            , li [] [ text "Process" ]
+            , li [] [ text "Settings" ]
+            ]
         ]
-
 
 notFound : Model -> Html Msg
 notFound model =

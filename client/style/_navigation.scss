@@ -1,0 +1,13 @@
+.navigation {
+  width: 320px;
+  height: 100vh;
+  color: var(--text);
+  background-color: var(--sub-bg);
+  > h1 {
+    width: 100%;
+    height: 3rem;
+  }
+  > ul {
+    list-style: none;
+  }
+}

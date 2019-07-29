@@ -9,6 +9,8 @@ copyright:           "2018 REALGLOBE INC"
 extra-source-files:
 - README.md
 - ChangeLog.md
+- dist/main.js
+- dist/index.html
 
 description:         Please see the README on GitHub at <https://github.com/realglobe-Inc/hrafnar#readme>
 

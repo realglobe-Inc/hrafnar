@@ -33,17 +33,19 @@ data Value
   | VApp Value Value
   | VLam (Value -> Value)
   | VEff (Effect Event)
-  | VCase [(VPat, Value)]
+  | VCase Value [(VPat, Value)]
+
 
 data VPat
-  = VPBool
+  = VPBool Bool
   | VPInt Int
   | VPChar Char
   | VPString String
   | VPTuple [Value]
   | VPList [Value]
   | VPVar String
-  | VPCon Name
+  | VPCon Name [VPat]
+  | VPWildcard
 
 
 instance Eq Value where

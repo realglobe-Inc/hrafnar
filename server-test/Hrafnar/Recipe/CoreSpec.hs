@@ -79,6 +79,33 @@ spec = do
 
     it "partial application" $
       ev "main = Cons 0; data Wrap = Cons Int Int" `shouldBe` VCon "Cons" [VInt 0]
+    it "nested" $
+      ev "main = Outer (Inner 0); data Outer = Outer Inner; data Inner = Inner Int" `shouldBe` VCon "Outer" [VCon "Inner" [VInt 0]]
+
+  describe "case" $ do
+    it "variable" $
+      ev "main = case x of { y -> y }; x = 0" `shouldBe` VInt 0
+    it "first branch" $
+      ev "main = case x of { 1 -> 2; 2 -> 4}; x = 1" `shouldBe` VInt 2
+    it "second branch" $
+      ev "main = case x of { 1 -> 2; 2 -> 4}; x = 2" `shouldBe` VInt 4
+    it "deconstruct data type" $
+      ev "main = case x of { Foo y -> y }; data Hoge = Foo Int; x = Foo 0" `shouldBe` VInt 0
+    it "nested data type" $ do
+      let p = "main = case x of { Hoge (Bar 1) -> 1; Hoge (Foo 0) -> 0};"
+            <> "data Hoge = Hoge FooBar;"
+            <> "data FooBar = Foo Int | Bar Int;"
+            <> "x = Hoge (Foo 0)"
+      ev p `shouldBe` VInt 0
+    it "constructor that has multi arguments" $
+      ev "main = case x of { Foo y z -> add y z}; data Foo = Foo Int Int; x = Foo 1 2" `shouldBe` VInt 3
+    it "constructor that has multi arguments, one of which is data type" $ do
+      let p = "main = case x of { Hoge (Foo y) z -> add y z};"
+            <> "data Hoge = Hoge Foo Int;"
+            <> "data Foo = Foo Int;"
+            <> "x = Hoge (Foo 1) 2"
+      ev p `shouldBe` VInt 3
+
 
   describe "evalMain" $
     it "declaration order does not matter" $

@@ -126,9 +126,18 @@ compilePat (pat, expr) = compilePat' pat >>= makePair
       pure (vp, v)
 
     compilePat' (At _ pat) = case pat of
-      PVar n       -> pure $ VPVar n
-      PLit (Int i) -> pure $ VPInt i
-      PCon n pats  -> VPCon n <$> traverse compilePat' pats
+      PVar n      -> pure $ VPVar n
+      PLit l      -> lit l
+      PCon n pats -> VPCon n <$> traverse compilePat' pats
+      PCons{}     -> undefined
+      PWildcard   -> pure VPWildcard
+    lit = \case
+      Int i -> pure $ VPInt i
+      Bool b -> pure $ VPBool b
+      Char c -> pure $ VPChar c
+      String s -> pure $ VPString s
+      Tuple t -> VPTuple <$> traverse compile t
+      List l -> VPList <$> traverse compile l
 
 
 
@@ -197,6 +206,11 @@ consumePats value ((pat, patv):xs) = do
         in
         foldr f (True, acc) (zip pats' $ conValues v)
       VPInt i | VInt i == v -> (True, acc)
+      VPBool b | VBool b == v -> (True, acc)
+      VPChar c | VChar c == v -> (True, acc)
+      VPString s | VString s == v -> (True, acc)
+      VPTuple _ -> undefined
+      VPList _ -> undefined
       _             -> (False, acc)
 
 

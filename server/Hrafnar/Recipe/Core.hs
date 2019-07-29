@@ -175,11 +175,29 @@ link e = pure e
 
 consumePats :: Value -> [(VPat, Value)] -> Eval Value
 consumePats _ [] = throwString "There is no matched pattern" -- temp error
-consumePats value ((pat, patv):xs) = case pat of
-  VPVar n                   -> link (VApp (abstract n patv) value)
-  VPInt i | VInt i == value -> link patv
-  VPWildcard                -> link patv
-  _                         -> consumePats value xs
+consumePats value ((pat, patv):xs) = do
+  let (isMatch, sbst) = solve pat value []
+  if isMatch
+    then
+      let f (n, v') acc = VApp (abstract n acc) v' in
+      link $ foldr f patv (reverse sbst)
+    else consumePats value xs
+  where
+    conName (VCon n _) = n
+    conValues (VCon _ vs) = vs
+    -- |
+    -- judge whether given pattern matches given value
+    -- and return local variable name and correspondsant value
+    solve :: VPat -> Value -> [(String, Value)] -> (Bool, [(String, Value)])
+    solve pat v acc = case pat of
+      VPVar n       -> (True, (n, v) : acc)
+      VPCon n pats' | n == conName v ->
+        let f (p, v) (isMatch, sbst) =
+              let (isMatch', sbst') = solve p v sbst in (isMatch && isMatch', sbst')
+        in
+        foldr f (True, acc) (zip pats' $ conValues v)
+      VPInt i | VInt i == v -> (True, acc)
+      _             -> (False, acc)
 
 
 

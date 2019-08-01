@@ -6,8 +6,8 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Maybe
-import Page.Editor as Editor
 import Page.Index as Index
+import Page.Project as Project
 import Url exposing (Url)
 import Url.Parser as UP exposing ((</>), Parser)
 
@@ -33,7 +33,7 @@ type alias Model =
 
 type Route
     = Index Index.Model
-    | Editor Editor.Model
+    | Project Project.Model
     | NotFound
 
 
@@ -45,8 +45,8 @@ type Language
 type Msg
     = Link UrlRequest
     | UrlChanged Url
-    | EditorMsg Editor.Msg
     | IndexMsg Index.Msg
+    | ProjectMsg Project.Msg
     | NoOp
 
 
@@ -65,21 +65,21 @@ stepUrl url model =
         parser =
             UP.oneOf
                 [ UP.map (stepIndex model <| Index.init) UP.top
-                , UP.map (stepEditor model <| Editor.init) (UP.s "editor")
+                , UP.map (stepProject model <| Project.init) (UP.s "project")
                 ]
     in
     UP.parse parser url
         |> Maybe.withDefault ( { model | route = NotFound }, Cmd.none )
 
 
-stepEditor : Model -> ( Editor.Model, Cmd Editor.Msg ) -> ( Model, Cmd Msg )
-stepEditor model ( model_, cmd ) =
-    ( { model | route = Editor model_ }, Cmd.map EditorMsg cmd )
 
 stepIndex : Model -> ( Index.Model, Cmd Index.Msg ) -> ( Model, Cmd Msg )
 stepIndex model ( model_, cmd ) =
     ( { model | route = Index model_ }, Cmd.map IndexMsg cmd )
 
+stepProject : Model -> ( Project.Model, Cmd Project.Msg ) -> ( Model, Cmd Msg )
+stepProject model ( model_, cmd ) =
+    ( { model | route = Project model_ }, Cmd.map ProjectMsg cmd )
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -99,11 +99,11 @@ update msg model =
         ( UrlChanged url, _ ) ->
             stepUrl url model
 
-        ( EditorMsg msg_, Editor model_ ) ->
-            stepEditor model <| Editor.update model_ msg_
-
         ( IndexMsg msg_, Index model_ ) ->
             stepIndex model <| Index.update model_ msg_
+
+        ( ProjectMsg msg_, Project model_ ) ->
+            stepProject model <| Project.update model_ msg_
 
         _ ->
             ( model
@@ -125,15 +125,18 @@ view model =
                           ]
               ]
               [ navigation model
-              , case model.route of
-                    Index model_ ->
-                        Html.map IndexMsg <| Index.view model_
-
-                    Editor model_ ->
-                        Html.map EditorMsg <| Editor.view model_
-
-                    NotFound ->
-                        notFound model
+              , div [ class "content" ]
+                    <| case model.route of
+                        Index model_ ->
+                            [ h1 [] [ text "Dashboard" ]
+                            , Html.map IndexMsg <| Index.view model_
+                            ]
+                        Project model_ ->
+                            [ h1 [] [ text "Project" ]
+                            , Html.map ProjectMsg <| Project.view model_
+                            ]
+                        NotFound ->
+                            [ notFound model ]
               ]
         ]
     }

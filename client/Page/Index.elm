@@ -1,6 +1,7 @@
 module Page.Index exposing (Model, Msg, init, update, view)
 
 import Html exposing (..)
+import Html.Attributes exposing (..)
 import Http
 import Json.Encode as JE
 import Json.Decode as JD
@@ -65,6 +66,4 @@ update model msg =
 
 
 view : Model -> Html Msg
-view model =
-    div []
-        [ text "index dayo"]
+view model = text  "index dayo"

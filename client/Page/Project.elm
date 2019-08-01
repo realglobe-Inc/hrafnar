@@ -9,7 +9,6 @@ import Json.Decode as JD
 
 type alias Project =
     { name : String
-    , date : Int
     }
 
 type alias Model =
@@ -29,21 +28,32 @@ type Msg
 
 init : ( Model, Cmd Msg )
 init =
-    ( Model "" [], Cmd.none )
+    ( Model "" [], getProjectList )
 
+getProjectList : Cmd Msg
+getProjectList = Http.get
+                 { url = "/api/project"
+                 , expect = Http.expectJson GetProjectListCompleted
+                            (JD.field "projects"  (JD.list (JD.map Project (JD.field "name" JD.string))))
+                 }
 
 update : Model -> Msg -> ( Model, Cmd Msg )
 update model msg =
     case msg of
 
         GetProjectList ->
-            ( model, Cmd.none )
+            ( model
+            , getProjectList
+            )
 
         GetProjectListCompleted (Ok result) ->
-            ( { model | projects = result } , Cmd.none )
+            ( { model | projects = Debug.log "res" result } , Cmd.none )
 
-        GetProjectListCompleted (Err _) ->
-            ( model, Cmd.none )
+        GetProjectListCompleted (Err e) ->
+            let
+                _ = Debug.log "err" e
+            in
+                ( model, Cmd.none )
 
         InputProjectName name ->
             ( { model | newProjectName = name }, Cmd.none )
@@ -58,7 +68,7 @@ update model msg =
             )
 
         CreateProjectCompleted (Ok _) ->
-            ( model, Cmd.none )
+            ( model, getProjectList )
 
         CreateProjectCompleted (Err _) ->
             ( model, Cmd.none )
@@ -79,14 +89,20 @@ onEnter msg =
 
 view : Model -> Html Msg
 view model = main_ []
-             [ input [ onInput InputProjectName
-                     , onEnter CreateProject
-                     , placeholder "new project name"
-                     , value model.newProjectName
-                     ]
-                   []
-             , button
-                   [ onClick CreateProject
+             [ div []
+                   [ input [ onInput InputProjectName
+                           , onEnter CreateProject
+                           , placeholder "new project name"
+                           , value model.newProjectName
+                           ]
+                         []
+                   , button
+                         [ onClick CreateProject
+                         ]
+                         [ text "create new project" ]
                    ]
-                   [ text "create new project" ]
+             , div []
+                   [ ul []
+                        <| List.map (\proj -> li [] [ text proj.name ]) model.projects
+                   ]
              ]

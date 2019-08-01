@@ -57,7 +57,8 @@ spec = around withTemp $ do
         get endpoint
           `shouldRespondWith`
           obj
-          [ "projects" .= Array (V.fromList . fmap String $ L.sort
+          [ "projects" .= Array
+            (V.fromList . fmap (\name -> object ["name" .= String name]) $ L.sort
             [ "foo"
             , "bar"
             , "baz"

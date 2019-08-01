@@ -52,13 +52,22 @@ project name = (</>) <$> root <*> parseRelDir name
 
 
 -- GET /project
-type GetProjectResponse = Record
-  '[ "projects" >: [String]
+type Project = Record
+  '[ "name" >: String
    ]
+
+type GetProjectResponse = Record
+  '[ "projects" >: [Project]
+   ]
+
 getProject :: UseDI => Servant.Handler GetProjectResponse
 getProject = do
   (dirs, _) <- listDirRel =<< root
-  pure $ #projects @= L.sort (fmap (dropTrailingPathSeparator . toFilePath) dirs) <: nil
+  let projects = L.sort
+                 (fmap (\n ->
+                          #name @= (dropTrailingPathSeparator $ toFilePath n) <:
+                          nil) dirs)
+  pure $ #projects @= projects <: nil
 
 -- POST /project/:name
 type PostProjectRequest = Record

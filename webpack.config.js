@@ -21,7 +21,7 @@ module.exports = () => ({
           {
             loader: 'elm-webpack-loader',
             options: {
-              optimize: true,
+              optimize: mode === 'production',
               },
           }
         ]
@@ -57,6 +57,14 @@ module.exports = () => ({
     ],
   },
   devServer: {
-    historyApiFallback: true
+    historyApiFallback: true,
+    host: 'localhost',
+    port: 8001,
+
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080'
+      }
+    }
   }
 })

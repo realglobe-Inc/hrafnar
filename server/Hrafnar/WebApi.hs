@@ -38,6 +38,7 @@ import           Servant                     hiding (Handler (..))
 import qualified Servant                     (Handler (..))
 import           System.FilePath.Posix       (dropTrailingPathSeparator)
 
+import           Debug.Trace
 
 root :: (MonadIO m, MonadThrow m, UseDI) => m (Path Abs Dir)
 root = do
@@ -110,19 +111,17 @@ instance AE.ToJSON GetDirsOrFileResponse where
 
 getDirsOrFile :: UseDI => String -> [FilePath] -> Servant.Handler GetDirsOrFileResponse
 getDirsOrFile proj path = do
-  p <- liftA2 (</>) root (parseRelDir $ L.intercalate "/" (path <> [proj]))
-  isDir <- doesDirExist p
-  if isDir
-    then do
+  if L.null path || last path == ""
+  then do
+    p <- liftA2 (</>) root (parseRelDir $ L.intercalate "/" ([proj] <> path) )
     (ds, fs) <- listDirRel p
     let dirs = fmap (\d -> #name @= toFilePath d <: #dir @= True <: nil) ds <>
                fmap (\f -> #name @= toFilePath f <: #dir @= False <: nil) fs
     pure $ #dirs # dirs
-
-    else do
-    let name = last path
+  else do
+    p <- liftA2 (</>) root (parseRelFile $ L.intercalate "/" ([proj] <> path))
     content <- liftIO . readFile $ toFilePath p
-    pure $ #file # (#name @= name <: #content @= content <: nil)
+    pure $ #file # (#name @= last path <: #content @= content <: nil)
 
 
 -- POST /project/:name/*path

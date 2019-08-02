@@ -107,6 +107,17 @@ spec = around withTemp $ do
             , object [ "dir" .= Bool False, "name" .= String "foo" ]
             ])
           ]
+
+      it "file content" $ do
+        _ <- createProject "example"
+        _ <- createFile "example" "nyaan" "nyaan"
+        get (endpoint <> "/nyaan")
+          `shouldRespondWith`
+          obj
+          [ "file" .= object [ "name" .= String "nyaan", "content" .= String "nyaan" ]
+          ]
+
+
     describe "post" $ do
 
       it "make dir" $ do

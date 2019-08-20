@@ -21,14 +21,14 @@ module.exports = () => ({
           {
             loader: 'elm-webpack-loader',
             options: {
-              optimize: true,
+              optimize: mode === 'production',
               },
           }
         ]
       },
       {
         test: /\.s?css$/,
-        use: ['css-loader', 'sass-loader']
+        use: ['style-loader', 'css-loader', 'sass-loader']
       }
     ]
   },
@@ -57,6 +57,14 @@ module.exports = () => ({
     ],
   },
   devServer: {
-    historyApiFallback: true
+    historyApiFallback: true,
+    host: 'localhost',
+    port: 8001,
+
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080'
+      }
+    }
   }
 })

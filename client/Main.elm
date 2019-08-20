@@ -6,7 +6,8 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Maybe
-import Page.Editor as Editor
+import Page.Index as Index
+import Page.Project as Project
 import Url exposing (Url)
 import Url.Parser as UP exposing ((</>), Parser)
 
@@ -31,8 +32,8 @@ type alias Model =
 
 
 type Route
-    = Index
-    | Editor Editor.Model
+    = Index Index.Model
+    | Project Project.Model
     | NotFound
 
 
@@ -44,7 +45,8 @@ type Language
 type Msg
     = Link UrlRequest
     | UrlChanged Url
-    | EditorMsg Editor.Msg
+    | IndexMsg Index.Msg
+    | ProjectMsg Project.Msg
     | NoOp
 
 
@@ -62,18 +64,22 @@ stepUrl url model =
     let
         parser =
             UP.oneOf
-                [ UP.map ( { model | route = Index }, Cmd.none ) UP.top
-                , UP.map (stepEditor model <| Editor.init) (UP.s "editor")
+                [ UP.map (stepIndex model <| Index.init) UP.top
+                , UP.map (stepProject model <| Project.init) (UP.s "project")
                 ]
     in
     UP.parse parser url
         |> Maybe.withDefault ( { model | route = NotFound }, Cmd.none )
 
 
-stepEditor : Model -> ( Editor.Model, Cmd Editor.Msg ) -> ( Model, Cmd Msg )
-stepEditor model ( model_, cmd ) =
-    ( { model | route = Editor model_ }, Cmd.map EditorMsg cmd )
 
+stepIndex : Model -> ( Index.Model, Cmd Index.Msg ) -> ( Model, Cmd Msg )
+stepIndex model ( model_, cmd ) =
+    ( { model | route = Index model_ }, Cmd.map IndexMsg cmd )
+
+stepProject : Model -> ( Project.Model, Cmd Project.Msg ) -> ( Model, Cmd Msg )
+stepProject model ( model_, cmd ) =
+    ( { model | route = Project model_ }, Cmd.map ProjectMsg cmd )
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -93,8 +99,11 @@ update msg model =
         ( UrlChanged url, _ ) ->
             stepUrl url model
 
-        ( EditorMsg msg_, Editor model_ ) ->
-            stepEditor model <| Editor.update model_ msg_
+        ( IndexMsg msg_, Index model_ ) ->
+            stepIndex model <| Index.update model_ msg_
+
+        ( ProjectMsg msg_, Project model_ ) ->
+            stepProject model <| Project.update model_ msg_
 
         _ ->
             ( model
@@ -109,30 +118,40 @@ subscriptions model =
 
 view : Model -> Document Msg
 view model =
-    { title = "Realglobe"
+    { title = "Hrafnar"
     , body =
-        [ div [ class "container" ]
-            [ case model.route of
-                Index ->
-                    index model
-
-                Editor model_ ->
-                    Html.map EditorMsg <| Editor.view model_
-
-                NotFound ->
-                    notFound model
-            ]
+        [ div [ classList [ ("container", True)
+                          , ("ravens-are-in-odins-service", True)
+                          ]
+              ]
+              [ navigation model
+              , div [ class "content" ]
+                    <| case model.route of
+                        Index model_ ->
+                            [ h1 [] [ text "Dashboard" ]
+                            , Html.map IndexMsg <| Index.view model_
+                            ]
+                        Project model_ ->
+                            [ h1 [] [ text "Project" ]
+                            , Html.map ProjectMsg <| Project.view model_
+                            ]
+                        NotFound ->
+                            [ notFound model ]
+              ]
         ]
     }
 
-
-index : Model -> Html Msg
-index model =
-    div []
-        [ h1 [] [ text "index" ]
-        , a [ href "/editor" ] [ text "go to editor" ]
+navigation : Model -> Html Msg
+navigation model =
+    div [ class "navigation" ]
+        [ h1 [] [ text "HRAFNAR" ]
+        , ul []
+            [ li [] [ a [ href "/" ] [ text "Dashboard" ] ]
+            , li [] [ a [ href "/project" ] [ text "Project" ] ]
+            , li [] [ a [ href "/process" ] [ text "Process" ] ]
+            , li [] [ a [ href "/settings" ] [ text "Settings" ] ]
+            ]
         ]
-
 
 notFound : Model -> Html Msg
 notFound model =

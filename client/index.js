@@ -1,8 +1,6 @@
 'use strict'
 
-//import './index.html'
-import './style.scss'
-
+import './style/style.scss'
 import { Elm } from './Main.elm'
 
 const app = Elm.Main.init()

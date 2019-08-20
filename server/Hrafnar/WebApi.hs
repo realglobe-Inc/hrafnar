@@ -22,6 +22,7 @@ import           Control.Exception.Safe
 import           Control.Lens                hiding ((.=))
 import           Control.Monad
 import           Control.Monad.IO.Class
+import qualified Data.Aeson                  as AE
 import qualified Data.ByteString.Lazy        as LBS
 import           Data.Extensible
 import           Data.FileEmbed
@@ -37,6 +38,8 @@ import           Servant                     hiding (Handler (..))
 import qualified Servant                     (Handler (..))
 import           System.FilePath.Posix       (dropTrailingPathSeparator)
 
+import           Debug.Trace
+
 root :: (MonadIO m, MonadThrow m, UseDI) => m (Path Abs Dir)
 root = do
   let dir = env ^. (itemAssoc (Proxy @ "HRAF_PROJECT_DIR"))
@@ -51,16 +54,27 @@ project :: (MonadIO m, MonadThrow m, UseDI) => String -> m (Path Abs Dir)
 project name = (</>) <$> root <*> parseRelDir name
 
 
--- GET /project
-type GetProjectResponse = Record
-  '[ "projects" >: [String]
+-- /project
+-- GET
+type Project = Record
+  '[ "name" >: String
    ]
+
+type GetProjectResponse = Record
+  '[ "projects" >: [Project]
+   ]
+
 getProject :: UseDI => Servant.Handler GetProjectResponse
 getProject = do
   (dirs, _) <- listDirRel =<< root
-  pure $ #projects @= L.sort (fmap (dropTrailingPathSeparator . toFilePath) dirs) <: nil
+  let projects = L.sort
+                 (fmap (\n ->
+                          #name @= (dropTrailingPathSeparator $ toFilePath n) <:
+                          nil) dirs)
+  pure $ #projects @= projects <: nil
 
--- POST /project/:name
+-- /project/:name
+-- POST
 type PostProjectRequest = Record
   '[
    ]
@@ -74,40 +88,109 @@ postProject name = do
   project name >>= liftIO . createDirIfMissing False
   pure $ #name @= name <: nil
 
--- POST /project/:name/:sourcepath
-type PostSourceRequest = Record
-  '[ "source" >: String
+
+-- /project/:name/*path
+-- GET
+
+type DirInfo = Record
+  '[ "name" >: String
+   , "dir" >: Bool
    ]
 
-type PostSourceResponse = Record
+type FileContent = Record
+  '[ "name" >: String
+   , "content" >: String
+   ]
+
+type GetDirsOrFileResponse = Variant
+  '[ "dirs" >: [DirInfo]
+   , "file" >: FileContent
+   ]
+
+instance AE.ToJSON GetDirsOrFileResponse where
+  toJSON = matchField $
+    #dirs @= (\d -> AE.object ["dirs" AE..= d]) <:
+    #file @= (\f -> AE.object ["file" AE..= f]) <:
+    nil
+
+getDirsOrFile :: UseDI => String -> [FilePath] -> Servant.Handler GetDirsOrFileResponse
+getDirsOrFile proj path = do
+  if L.null path || last path == ""
+  then do
+    p <- liftA2 (</>) root (parseRelDir $ L.intercalate "/" ([proj] <> path) )
+    (ds, fs) <- listDirRel p
+    let dirs = L.sort (fmap (\d -> #name @= toFilePath d <: #dir @= True <: nil) ds) <>
+               L.sort (fmap (\f -> #name @= toFilePath f <: #dir @= False <: nil) fs)
+    pure $ #dirs # dirs
+  else do
+    p <- liftA2 (</>) root (parseRelFile $ L.intercalate "/" ([proj] <> path))
+    content <- liftIO . readFile $ toFilePath p
+    pure $ #file # (#name @= last path <: #content @= content <: nil)
+
+
+-- POST
+type PostDirOrSourceRequest = Record
+  '[ "source" >: Maybe String
+   ]
+
+type PostDirOrSourceResponse = Record
+  '[ "result" >: Maybe FileResponse
+   ]
+
+type FileResponse = Record
   '[ "parse" >: Bool
    , "typeCheck" >: Bool
    , "message" >: Maybe String
    ]
 
-postSource :: UseDI => String -> [FilePath] -> PostSourceRequest -> Servant.Handler PostSourceResponse
-postSource name paths body = do
+postDirOrSource :: UseDI => String -> [FilePath] -> PostDirOrSourceRequest -> Servant.Handler PostDirOrSourceResponse
+postDirOrSource name paths body = do
   proj <- project name
   p <- doesDirExist proj
   unless p $ throw err404 { errBody = "project not found" }
-  path' <- parseRelFile $ L.intercalate "/" paths
-  let path = proj </> path'
-  debug useLogger $ "make" <> show path
-  liftIO . writeFile (toFilePath path) $ body ^. #source
-  flip catches [parserError, infererError] $ do
-    decls <- parse $ body ^. #source
-    _ <- infer MA.empty $ withDummy . Let decls . withDummy $ Var "main"
-    pure $ #parse @= True <: #typeCheck @= True <: #message @= Nothing <: nil
+  case body ^. #source of
+    Just source -> do
+      path' <- parseRelFile $ L.intercalate "/" paths
+      let path = proj </> path'
+      case fileExtension path of
+        ".hl" -> do
+          debug useLogger $ "make hl source " <> show path
+          liftIO $ writeFile (toFilePath path) source
+          flip catches [parserError, infererError] $ do
+            decls <- parse source
+            _ <- infer MA.empty $ withDummy . Let decls . withDummy $ Var "main"
+            pure $ #result @= Just (#parse @= True <: #typeCheck @= True <: #message @= Nothing <: nil) <: nil
+        _ -> do
+          debug useLogger $ "make file " <> show path
+          liftIO $ writeFile (toFilePath path) source
+          pure $ #result @= Nothing <: nil
+    Nothing -> do
+      path' <- parseRelDir $ L.intercalate "/" paths
+      let path = proj </> path'
+      debug useLogger $ "make dir " <> show path
+      createDir path
+      pure $ #result @= Nothing <: nil
   where
     parserError = Handler $ \case
       StringException e _ ->
-        pure $ #parse @= False <: #typeCheck @= False <: #message @= Just e <: nil
+        pure $ #result @= Just (#parse @= False <: #typeCheck @= False <: #message @= Just e <: nil) <: nil
     infererError = Handler $ \case
       TypeVariableNotFound e ->
-        pure $
-        #parse @= True <: #typeCheck @= False <:
-        #message @= Just ("type variable not found: " <> e)  <:
-        nil
+        pure $ #result @= Just
+        ( #parse @= True <: #typeCheck @= False <:
+          #message @= Just ("type variable not found: " <> e)  <:
+          nil
+        ) <: nil
+
+-- /process/:name
+-- POST
+type PostProcessResponse = Record
+  '[ "id" >: String
+   ]
+
+postProcess :: UseDI => String -> Servant.Handler PostProcessResponse
+postProcess proj = do
+  pure undefined
 
 -- static files
 -- index.html
@@ -145,7 +228,8 @@ type Api =
     "project" :>
     ( Get '[JSON] GetProjectResponse :<|>
       Capture "name" String :> Post '[JSON] PostProjectResponse :<|>
-      Capture "name" String :> CaptureAll "source" FilePath :> ReqBody '[JSON] PostSourceRequest :> Post '[JSON] PostSourceResponse
+      Capture "name" String :> CaptureAll "path" FilePath :> Get '[JSON] GetDirsOrFileResponse :<|>
+      Capture "name" String :> CaptureAll "source" FilePath :> ReqBody '[JSON] PostDirOrSourceRequest :> Post '[JSON] PostDirOrSourceResponse
     )
   ) :<|>
   Get '[HTML] LBS.ByteString :<|>
@@ -154,7 +238,8 @@ type Api =
 server :: UseDI => Server Api
 server = ( getProject :<|>
            postProject :<|>
-           postSource
+           getDirsOrFile :<|>
+           postDirOrSource
          ) :<|>
          indexHtml :<|>
          mainJS

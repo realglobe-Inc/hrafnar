@@ -1,8 +1,7 @@
-module Page.Editor exposing (Model, Msg, init, update, view)
+module Page.Index exposing (Model, Msg, init, update, view)
 
 import Html exposing (..)
-import Html.Attributes exposing (value)
-import Html.Events exposing (onClick, onInput)
+import Html.Attributes exposing (..)
 import Http
 import Json.Encode as JE
 import Json.Decode as JD
@@ -67,9 +66,4 @@ update model msg =
 
 
 view : Model -> Html Msg
-view model =
-    div []
-        [ textarea [ onInput TextInput, value model.code ] []
-        , button [ onClick OnSubmit ] [ text "Run" ]
-        , text model.message
-        ]
+view model = text  "index dayo"

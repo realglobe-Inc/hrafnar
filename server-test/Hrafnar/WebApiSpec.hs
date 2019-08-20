@@ -13,11 +13,12 @@ import           Data.CaseInsensitive
 import           Data.Extensible
 import qualified Data.List                  as L
 import           Data.String
+import qualified Data.Text                  as ST
 import qualified Data.Vector                as V
 import           Network.Wai
 import           Network.Wai.Test
 import           Path
-import           Path.IO
+import           Path.IO                    hiding (createDir)
 import           Test.Hspec
 import           Test.Hspec.Wai
 
@@ -42,6 +43,12 @@ withTemp action = do
 createProject :: SBS.ByteString -> WaiSession SResponse
 createProject p = post' ("/api/project/" <> p) []
 
+createDir :: SBS.ByteString -> SBS.ByteString -> WaiSession SResponse
+createDir proj path =  post' ("/api/project/" <> proj <> "/" <> path) []
+
+createFile :: SBS.ByteString -> SBS.ByteString -> ST.Text -> WaiSession SResponse
+createFile proj path source =  post' ("/api/project/" <> proj <> "/" <> path) [ "source" .= String source ]
+
 spec :: Spec
 spec = around withTemp $ do
 
@@ -57,7 +64,8 @@ spec = around withTemp $ do
         get endpoint
           `shouldRespondWith`
           obj
-          [ "projects" .= Array (V.fromList . fmap String $ L.sort
+          [ "projects" .= Array
+            (V.fromList . fmap (\name -> object ["name" .= String name]) $ L.sort
             [ "foo"
             , "bar"
             , "baz"
@@ -78,32 +86,82 @@ spec = around withTemp $ do
           ]
 
 
-  describe "/project/:name/sourcefile" $ do
-    let endpoint = "/api/project/example/source"
+  describe "/project/:name/*path" $ do
+    let endpoint = "/api/project/example"
+
+    describe "get" $ do
+
+      it "file list" $ do
+        _ <- createProject "example"
+        _ <- createDir "example" "hoge"
+        _ <- createDir "example" "fuga"
+        _ <- createFile "example" "foo" ""
+        _ <- createFile "example" "bar" ""
+        get endpoint
+          `shouldRespondWith`
+          obj
+          [ "dirs" .= Array (V.fromList
+            [ object [ "dir" .= Bool True, "name" .= String "fuga/" ]
+            , object [ "dir" .= Bool True, "name" .= String "hoge/" ]
+            , object [ "dir" .= Bool False, "name" .= String "bar" ]
+            , object [ "dir" .= Bool False, "name" .= String "foo" ]
+            ])
+          ]
+
+      it "file content" $ do
+        _ <- createProject "example"
+        _ <- createFile "example" "nyaan" "nyaan"
+        get (endpoint <> "/nyaan")
+          `shouldRespondWith`
+          obj
+          [ "file" .= object [ "name" .= String "nyaan", "content" .= String "nyaan" ]
+          ]
+
 
     describe "post" $ do
 
-      it "valid" $ do
+      it "make dir" $ do
         _ <- createProject "example"
-        post' endpoint
-          [ "source" .= String "main = 123" ]
+        post' (endpoint <> "/hoge")
+          [ "source" .= Null ]
           `shouldRespondWith`
           obj
-          [ "parse" .= Bool True
-          , "typeCheck" .= Bool True
-          , "message" .= Null
+          [ "result" .= Null
           ]
 
-      it "fails parsing" $ do
+
+      it "make not hl file" $ do
         _ <- createProject "example"
-        post' endpoint
-          [ "source" .= String "nyaan" ]
+        post' (endpoint <> "/fuga")
+          [ "source" .= String "lorem ipsum" ]
           `shouldRespondWith`
           obj
-          [ "parse" .= Bool False
-          , "typeCheck" .= Bool False
-          , "message" .= String "parseError: TkEof"
+          [ "result" .= Null
           ]
+
+      it "valid hl source" $ do
+        _ <- createProject "example"
+        post' (endpoint <> "/Main.hl")
+          [ "source" .= String "main = 123" ]
+          `shouldRespondWith`
+          obj [ "result" .= object
+                [ "parse" .= Bool True
+                , "typeCheck" .= Bool True
+                , "message" .= Null
+                ]
+              ]
+
+      it "invalid hl source" $ do
+        _ <- createProject "example"
+        post' (endpoint <> "/Main.hl")
+          [ "source" .= String "nyaan" ]
+          `shouldRespondWith`
+          obj [ "result" .= object
+                [ "parse" .= Bool False
+                , "typeCheck" .= Bool False
+                , "message" .= String "parseError: TkEof"
+                ]
+              ]
 
 
 injectToIO :: (UseDI => IO a) -> Path Abs Dir -> IO a

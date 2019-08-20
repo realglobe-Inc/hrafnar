@@ -54,7 +54,8 @@ project :: (MonadIO m, MonadThrow m, UseDI) => String -> m (Path Abs Dir)
 project name = (</>) <$> root <*> parseRelDir name
 
 
--- GET /project
+-- /project
+-- GET
 type Project = Record
   '[ "name" >: String
    ]
@@ -72,7 +73,8 @@ getProject = do
                           nil) dirs)
   pure $ #projects @= projects <: nil
 
--- POST /project/:name
+-- /project/:name
+-- POST
 type PostProjectRequest = Record
   '[
    ]
@@ -86,7 +88,9 @@ postProject name = do
   project name >>= liftIO . createDirIfMissing False
   pure $ #name @= name <: nil
 
--- GET /project/:name/*path
+
+-- /project/:name/*path
+-- GET
 
 type DirInfo = Record
   '[ "name" >: String
@@ -115,8 +119,8 @@ getDirsOrFile proj path = do
   then do
     p <- liftA2 (</>) root (parseRelDir $ L.intercalate "/" ([proj] <> path) )
     (ds, fs) <- listDirRel p
-    let dirs = fmap (\d -> #name @= toFilePath d <: #dir @= True <: nil) ds <>
-               fmap (\f -> #name @= toFilePath f <: #dir @= False <: nil) fs
+    let dirs = L.sort (fmap (\d -> #name @= toFilePath d <: #dir @= True <: nil) ds) <>
+               L.sort (fmap (\f -> #name @= toFilePath f <: #dir @= False <: nil) fs)
     pure $ #dirs # dirs
   else do
     p <- liftA2 (</>) root (parseRelFile $ L.intercalate "/" ([proj] <> path))
@@ -124,7 +128,7 @@ getDirsOrFile proj path = do
     pure $ #file # (#name @= last path <: #content @= content <: nil)
 
 
--- POST /project/:name/*path
+-- POST
 type PostDirOrSourceRequest = Record
   '[ "source" >: Maybe String
    ]
@@ -177,6 +181,16 @@ postDirOrSource name paths body = do
           #message @= Just ("type variable not found: " <> e)  <:
           nil
         ) <: nil
+
+-- /process/:name
+-- POST
+type PostProcessResponse = Record
+  '[ "id" >: String
+   ]
+
+postProcess :: UseDI => String -> Servant.Handler PostProcessResponse
+postProcess proj = do
+  pure undefined
 
 -- static files
 -- index.html

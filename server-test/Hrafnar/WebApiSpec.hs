@@ -101,8 +101,8 @@ spec = around withTemp $ do
           `shouldRespondWith`
           obj
           [ "dirs" .= Array (V.fromList
-            [ object [ "dir" .= Bool True, "name" .= String "hoge/" ]
-            , object [ "dir" .= Bool True, "name" .= String "fuga/" ]
+            [ object [ "dir" .= Bool True, "name" .= String "fuga/" ]
+            , object [ "dir" .= Bool True, "name" .= String "hoge/" ]
             , object [ "dir" .= Bool False, "name" .= String "bar" ]
             , object [ "dir" .= Bool False, "name" .= String "foo" ]
             ])

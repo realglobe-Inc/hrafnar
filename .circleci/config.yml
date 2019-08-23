@@ -30,7 +30,7 @@ jobs:
             hlint .
             stack --no-terminal test --system-ghc
       - save_cache:
-          name: Save packagess
+          name: Save packages
           key: lts-13.22-{{ checksum "package.yaml" }}-{{ checksum "package.json" }}
           paths:
             - /usr/lib/ghc/

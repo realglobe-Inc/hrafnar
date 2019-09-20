@@ -16,6 +16,7 @@ module Hrafnar.Annotation
   ) where
 
 import           Data.Functor (Functor)
+import Text.Megaparsec.Pos
 
 data Located a = At Position a deriving (Eq)
 
@@ -25,8 +26,8 @@ instance Functor Located where
 instance Show a => Show (Located a) where
   show (At _ val) = show val
 
-data Position =
-  SrcPos Int Int
+data Position
+  = SrcPos SourcePos
   | FromBuiltin
   | Dummy
   deriving (Eq, Show)

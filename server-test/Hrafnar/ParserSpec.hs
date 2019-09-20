@@ -3,22 +3,21 @@ module Hrafnar.ParserSpec(spec) where
 import           Hrafnar.Annotation
 import           Hrafnar.AST
 import           Hrafnar.Builtin
-import           Hrafnar.Lexer
 import           Hrafnar.Parser
 import           Hrafnar.Types
 
 import           Test.Hspec
 
+import Text.Megaparsec
 
 spec :: Spec
 spec = do
-  let p = alexSetUserState (AlexUserState operators)  >> exprParser
   describe "if" $ do
     it "parse if" $
-       fromExpr <$> runAlex "if x then y else z" exprParser
+       fromExpr <$> parse exprParser "ParserSpec" "if x then y else z"
        `shouldBe`
        Right (If' (Var' "x") (Var' "y") (Var' "z"))
-
+{-
     it "if has right assoc" $
       fromExpr <$> runAlex "if x then y else f z" exprParser
       `shouldBe`
@@ -145,7 +144,7 @@ spec = do
       runAlex "data Hoge a = Foo a" declParser
       `shouldBe`
       Right (DataDecl "Hoge" ["a"] [("Foo", TyFun (TyVar $ TV "a") (TyCon "Hoge"))])
-
+-}
 
 data ExprSrc
   = Apply' ExprSrc ExprSrc

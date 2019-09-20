@@ -6,7 +6,6 @@ import           Hrafnar.Builtin
 import           Hrafnar.Core
 import           Hrafnar.Exception
 import           Hrafnar.Inferer
-import           Hrafnar.Lexer
 import           Hrafnar.Parser
 
 import           Control.Lens               hiding (setting)
@@ -16,7 +15,7 @@ import           Control.Monad.State.Strict
 import qualified Data.List                  as L
 import qualified Data.Map.Strict            as MA
 import           System.Console.Haskeline
-
+import Text.Megaparsec
 
 data Env = Env
   { valEnv  :: VEnv
@@ -37,7 +36,7 @@ setting = Settings { historyFile = Nothing
                    }
 interpret :: String -> Interpret
 interpret i =
-  case runAlex i lineParser of
+  case parse  lineParser "" i of
     Right r -> case r of
       ExprLine e ->
         catches (interpretExpr e)
@@ -48,7 +47,7 @@ interpret i =
         catches (interpretDecl d)
                [ Handler inferError
                ]
-    Left l  -> outputStrLn l
+    Left _  -> outputStrLn "something wrong"
 
 interpretExpr :: Expr -> Interpret
 interpretExpr e  = do

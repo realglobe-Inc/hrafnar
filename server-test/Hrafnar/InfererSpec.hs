@@ -3,20 +3,20 @@ module Hrafnar.InfererSpec(spec) where
 import           Hrafnar.Annotation
 import           Hrafnar.AST
 import           Hrafnar.Inferer
-import           Hrafnar.Lexer
 import           Hrafnar.Parser
 import           Hrafnar.Types
 
 import           Test.Hspec
 
 import qualified Data.Map.Strict    as MA
+import Text.Megaparsec
 
 hl :: String -> Expr
 hl s =
   let
-    decls = case runAlex s parser of
+    decls = case parse declsParser "InferSpec" s of
       Right ds -> ds
-      Left e   -> error e
+      Left _-> error "something wrong"
   in
     withDummy . Let decls . withDummy $  Var "main"
 

@@ -3,20 +3,19 @@ module Hrafnar.CoreSpec(spec) where
 import           Hrafnar.Annotation
 import           Hrafnar.Builtin
 import           Hrafnar.Core
-import           Hrafnar.Lexer
 import           Hrafnar.Parser
 import           Test.Hspec
 
 import           Control.Lens       hiding (Context, List)
 import           Control.Monad.RWS
-
+import Text.Megaparsec
 
 ev :: String -> Value
 ev s =
   let
-    decls = case runAlex s (alexSetUserState (AlexUserState operators) >> parser) of
+    decls = case parse declsParser "CoreSpec" s of
       Right ds -> ds
-      Left e   -> error e
+      Left _   -> error "error"
     initSt = initialState & #venv .~ fmap (view _1) builtins
     result = fst <$> evalRWST
              (evalMain decls)

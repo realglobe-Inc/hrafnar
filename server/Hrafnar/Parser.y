@@ -1,13 +1,15 @@
 {
-module Hrafnar.Recipe.Parser where
+module Hrafnar.Parser where
 
-import Hrafnar.Recipe.Lexer
-import Hrafnar.Recipe.Types
-import Hrafnar.Recipe.Annotation
-import Hrafnar.Recipe.AST
+import Hrafnar.Lexer
+import Hrafnar.Types
+import Hrafnar.Annotation
+import Hrafnar.AST
+import Hrafnar.Builtin
 
 import qualified Data.Map as MA
 import qualified Data.Text as ST
+import Control.Exception.Safe
 }
 
 %name parser program
@@ -235,6 +237,11 @@ lexwrap = (alexMonadScan >>=)
 
 parseError :: Token -> Alex a
 parseError t = alexError $ "parseError: " ++ show t
+
+parse :: MonadThrow m => String -> m [Decl]
+parse s = case runAlex s $ alexSetUserState (AlexUserState operators) >> parser of
+  Right decls -> pure decls
+  Left e      -> throwString e
 
 -- parseHML s = runAlex s $ alexSetUserState (AlexUserState operators MA.empty) >> parser
 }

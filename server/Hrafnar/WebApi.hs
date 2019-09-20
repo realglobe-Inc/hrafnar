@@ -14,8 +14,12 @@ module Hrafnar.WebApi
   )
 where
 
+import           Hrafnar.Annotation
+import           Hrafnar.Core
 import           Hrafnar.DI
-import           Hrafnar.Recipe
+import           Hrafnar.Exception
+import           Hrafnar.Inferer
+import           Hrafnar.Parser
 
 import           Control.Applicative
 import           Control.Exception.Safe

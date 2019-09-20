@@ -1,6 +1,6 @@
 {-|
-Description : AST of Recipe
-Module      : Hrafnar.Recipe.AST
+Description : AST of hrafnar-lang
+Module      : Hrafnar.AST
 Copyright   : REALGLOBE INC. (c) REALGLOBE 2018
 License     : BSD3
 
@@ -8,7 +8,7 @@ Maintainer  : REALGLOBE INC.
 -}
 {-# LANGUAGE DeriveGeneric #-}
 
-module Hrafnar.Recipe.AST
+module Hrafnar.AST
   ( OpAssoc(..)
   , Expr'(..)
   , Expr
@@ -28,11 +28,11 @@ module Hrafnar.Recipe.AST
   , shrinkTypes
   ) where
 
-import           Hrafnar.Recipe.Annotation
-import           Hrafnar.Recipe.Assoc
-import           Hrafnar.Recipe.Types
+import           Hrafnar.Annotation
+import           Hrafnar.Assoc
+import           Hrafnar.Types
 
-import qualified Data.Aeson                as AE
+import qualified Data.Aeson         as AE
 import           GHC.Generics
 
 -- | Wrapper for value

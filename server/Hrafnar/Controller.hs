@@ -11,8 +11,9 @@ module Hrafnar.Controller
   ( controller
   ) where
 
+import           Hrafnar.Core
 import           Hrafnar.DI
-import           Hrafnar.Recipe
+import           Hrafnar.Event
 
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM

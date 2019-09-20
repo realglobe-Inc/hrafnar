@@ -1,24 +1,14 @@
---{-# LANGUAGE TypeApplications #-}
-module Hrafnar.Recipe.CoreSpec(spec) where
+module Hrafnar.CoreSpec(spec) where
 
-import           Hrafnar.DI
-import           Hrafnar.Recipe
-import           Hrafnar.Recipe.Lexer   hiding (operators)
+import           Hrafnar.Annotation
+import           Hrafnar.Builtin
+import           Hrafnar.Core
+import           Hrafnar.Lexer
+import           Hrafnar.Parser
 import           Test.Hspec
 
-import           Control.Exception.Safe
-import           Control.Lens           hiding (Context, List)
-import           Control.Monad.IO.Class (liftIO)
+import           Control.Lens       hiding (Context, List)
 import           Control.Monad.RWS
-import qualified Data.Aeson             as AE
-import           Data.Either            (isLeft, isRight)
-import           Data.Extensible
-import qualified Data.HashMap.Strict    as HM
-import qualified Data.Map.Strict        as MA
-import           Data.Scientific
-import qualified Data.Text              as ST
-import qualified Data.Vector            as VE
-
 
 
 ev :: String -> Value

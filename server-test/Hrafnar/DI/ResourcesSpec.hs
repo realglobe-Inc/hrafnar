@@ -1,16 +1,15 @@
 module Hrafnar.DI.ResourcesSpec where
 
+import           Hrafnar.Annotation
+import           Hrafnar.AST
+import           Hrafnar.Core
 import           Hrafnar.DI.Resources
-import           Hrafnar.Recipe
 
 import           Control.Concurrent.Async (async)
 import           Control.Concurrent.STM
 import           Control.Monad            (join)
-import qualified Data.Aeson               as AE
-import qualified Data.ByteString.Lazy     as LBS
 import           Data.Extensible
 import qualified Data.Map                 as MA
-import           Data.ULID
 import           Test.Hspec
 
 spec :: Spec
@@ -20,7 +19,7 @@ spec =
       pending
       l <- join $ injectResources $ do
         addSampleRecipe
-        manageRecipe $ \s -> async $ pure ()
+        manageRecipe $ \_ -> async $ pure ()
         manager <- readTVarIO recipeManager
         pure . length . MA.keys $ manager
       l `shouldBe` 1
@@ -28,10 +27,10 @@ spec =
       pending
       l <- join $ injectResources $ do
         addSampleRecipe
-        manageRecipe $ \s -> async $ pure ()
+        manageRecipe $ \_ -> async $ pure ()
         manager <- readTVarIO recipeManager
         atomically $ writeTQueue recipeQueue (RecipeRemove $ head . MA.keys $ manager)
-        manageRecipe $ \s -> async $ pure ()
+        manageRecipe $ \_ -> async $ pure ()
         length . MA.keys <$> readTVarIO recipeManager
       l `shouldBe` 0
 

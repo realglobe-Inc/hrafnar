@@ -32,6 +32,7 @@ dependencies:
 - http-media
 - http-types
 - lens
+- megaparsec
 - mtl
 - network
 - network-simple

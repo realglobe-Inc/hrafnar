@@ -1,13 +1,13 @@
 {-|
-Description : Definition of Recipe
-Module      : Hrafnar.Recipe.Core
+Description : Compiler and evaluater
+Module      : Hrafnar.Core
 Copyright   : REALGLOBE INC. (c) REALGLOBE 2018
 License     : BSD3
 
 Maintainer  : REALGLOBE INC.
 -}
 
-module Hrafnar.Recipe.Core
+module Hrafnar.Core
   ( Recipe
   , Effect(..)
   , ValTable
@@ -16,6 +16,8 @@ module Hrafnar.Recipe.Core
   , LocalState
   , Transaction
   , initialState
+  , initSituation
+  , defaultSituation
   , Eval
   , Value(..)
   , VEnv
@@ -25,23 +27,23 @@ module Hrafnar.Recipe.Core
   , link
   , update
   , combI
-  , module Hrafnar.Recipe.AST
+  , module Hrafnar.AST
   , (!)
   ) where
 
-import           Hrafnar.Recipe.Annotation
-import           Hrafnar.Recipe.AST
-import           Hrafnar.Recipe.Event
-import           Hrafnar.Recipe.Exception
-import           Hrafnar.Recipe.Types
-import           Hrafnar.Recipe.Value
+import           Hrafnar.Annotation
+import           Hrafnar.AST
+import           Hrafnar.Event
+import           Hrafnar.Exception
+import           Hrafnar.Types
+import           Hrafnar.Value
 
 import           Control.Applicative
 import           Control.Exception.Safe
-import           Control.Lens              hiding (Const, Context, List)
+import           Control.Lens           hiding (Const, Context, List)
 import           Control.Monad.RWS
-import           Data.Extensible           hiding (State)
-import qualified Data.Map                  as MA
+import           Data.Extensible        hiding (State)
+import qualified Data.Map               as MA
 --import           Debug.Trace
 
 type Recipe = Record
@@ -70,6 +72,18 @@ type LocalState = Record
    ]
 
 type VEnv = MA.Map Name Value
+
+
+defaultSituation :: Situation
+defaultSituation = initSituation MA.empty (#init # ())
+
+initSituation :: ExprTable -> Event -> Situation
+initSituation c e =
+  #event @= e <:
+  #context @= c <:
+  #implant @= MA.empty <:
+  #effects @= MA.empty <:
+  nil
 
 initialState :: LocalState
 initialState =

@@ -1,4 +1,13 @@
-module Hrafnar.Recipe.Annotation
+{-|
+Description : Annotation
+Module      : Hrafnar.Annotation
+Copyright   : REALGLOBE INC. (c) REALGLOBE 2018
+License     : BSD3
+
+Maintainer  : REALGLOBE INC.
+-}
+
+module Hrafnar.Annotation
   ( Located(..)
   , toPos
   , toValue

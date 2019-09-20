@@ -1,12 +1,12 @@
 {-|
 Description : Types
-Module      : Hrafnar.Recipe.Types
+Module      : Hrafnar.Types
 Copyright   : REALGLOBE INC. (c) REALGLOBE 2018
 License     : BSD3
 
 Maintainer  : REALGLOBE INC.
 -}
-module Hrafnar.Recipe.Types
+module Hrafnar.Types
   ( Name
   , Type(..)
   , TV(..)

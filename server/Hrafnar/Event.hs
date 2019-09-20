@@ -1,4 +1,4 @@
-module Hrafnar.Recipe.Event(Event) where
+module Hrafnar.Event(Event) where
 
 import           Data.Extensible
 

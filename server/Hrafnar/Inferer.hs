@@ -6,27 +6,27 @@ License     : BSD3
 
 Maintainer  : REALGLOBE INC.
 -}
-module Hrafnar.Recipe.Inferer
+module Hrafnar.Inferer
   ( Scheme (..)
   , TEnv
   , infer
   ) where
 
-import           Hrafnar.Recipe.Annotation
-import           Hrafnar.Recipe.AST
-import           Hrafnar.Recipe.Exception
-import           Hrafnar.Recipe.Types
+import           Hrafnar.Annotation
+import           Hrafnar.AST
+import           Hrafnar.Exception
+import           Hrafnar.Types
 
 import           Control.Applicative
 import           Control.Exception.Safe
-import           Control.Lens              hiding (Context, List)
+import           Control.Lens           hiding (Context, List)
 import           Control.Monad.RWS
 import           Control.Monad.Writer
-import qualified Data.Graph                as GR
-import qualified Data.List                 as L
-import qualified Data.Map                  as MA
+import qualified Data.Graph             as GR
+import qualified Data.List              as L
+import qualified Data.Map               as MA
 import           Data.Maybe
-import qualified Data.Set                  as SE
+import qualified Data.Set               as SE
 
 import           Debug.Trace
 

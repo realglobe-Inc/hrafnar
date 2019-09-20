@@ -1,15 +1,15 @@
-module Hrafnar.Recipe.InfererSpec(spec) where
+module Hrafnar.InfererSpec(spec) where
 
-import           Hrafnar.DI
-import           Hrafnar.Recipe
-import           Hrafnar.Recipe.Annotation
-import           Hrafnar.Recipe.Lexer
-import           Hrafnar.Recipe.Types
+import           Hrafnar.Annotation
+import           Hrafnar.AST
+import           Hrafnar.Inferer
+import           Hrafnar.Lexer
+import           Hrafnar.Parser
+import           Hrafnar.Types
+
 import           Test.Hspec
 
-import           Control.Monad.RWS
-import qualified Data.Map.Strict           as MA
-import qualified Data.Text                 as ST
+import qualified Data.Map.Strict    as MA
 
 hl :: String -> Expr
 hl s =

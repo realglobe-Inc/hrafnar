@@ -1,10 +1,10 @@
 {
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
-module Hrafnar.Recipe.Lexer where
+module Hrafnar.Lexer where
 
-import Hrafnar.Recipe.Annotation
-import Hrafnar.Recipe.Assoc
+import Hrafnar.Annotation
+import Hrafnar.Assoc
 
 import Control.Monad.State
 import qualified Data.Map.Strict as MA

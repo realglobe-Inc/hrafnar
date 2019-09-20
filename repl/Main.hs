@@ -1,6 +1,13 @@
 module Main where
 
-import           Hrafnar.Recipe
+import           Hrafnar.Annotation
+import           Hrafnar.AST
+import           Hrafnar.Builtin
+import           Hrafnar.Core
+import           Hrafnar.Exception
+import           Hrafnar.Inferer
+import           Hrafnar.Lexer
+import           Hrafnar.Parser
 
 import           Control.Lens               hiding (setting)
 

@@ -24,7 +24,7 @@ module Hrafnar.DI.Resources
   , RecipeManagement(..)
   ) where
 
-import           Hrafnar.Recipe.Event
+import           Hrafnar.Event
 
 import           Control.Concurrent.Async (Async, cancel)
 import           Control.Concurrent.STM

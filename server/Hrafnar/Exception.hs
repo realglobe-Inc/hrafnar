@@ -1,4 +1,4 @@
-module Hrafnar.Recipe.Exception
+module Hrafnar.Exception
   ( EvalException(..)
   , InferenceException(..)
   , RecipeException(..)

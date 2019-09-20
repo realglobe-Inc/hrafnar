@@ -1,6 +1,12 @@
-module Hrafnar.Recipe.ParserSpec(spec) where
+module Hrafnar.ParserSpec(spec) where
 
-import           Hrafnar.Recipe
+import           Hrafnar.Annotation
+import           Hrafnar.AST
+import           Hrafnar.Builtin
+import           Hrafnar.Lexer
+import           Hrafnar.Parser
+import           Hrafnar.Types
+
 import           Test.Hspec
 
 

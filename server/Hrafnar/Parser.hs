@@ -13,17 +13,17 @@ module Hrafnar.Parser
   , lineParser
   ) where
 
-import Hrafnar.AST
-import Hrafnar.Annotation
+import           Hrafnar.Annotation
+import           Hrafnar.AST
 
+import           Control.Monad
+import           Data.Functor
+import qualified Data.List                  as L
+import qualified Data.Set                   as SE
+import           Data.Void
 import           Text.Megaparsec
-import Text.Megaparsec.Char
+import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as Lx
-import Data.Void
-import qualified Data.List as L
-import qualified Data.Set as SE
-import Data.Functor
-import Control.Monad
 
 type Parser = Parsec Void String
 
@@ -45,19 +45,12 @@ reserved =
   , in_
   ]
 
+-- control expressions
 ifExpr :: Parser Expr
 ifExpr = do
   pos <- getSourcePos
   e <- If <$> (string if_ *> expr) <*> (string then_ *> expr) <*> (string else_ *> expr)
   pure $ At (SrcPos pos) e
-
-
-var :: Parser Expr
-var = do
-  sym <- some (alphaNumChar <|> symbolChar)
-  when (sym `elem` reserved) (failure Nothing SE.empty)
-  pos <- getSourcePos
-  pure $ At (SrcPos pos) (Var sym)
 
 lambda :: Parser Expr
 lambda = do
@@ -65,8 +58,27 @@ lambda = do
   e <- Lambda <$> (char '\\' >> space *> some letterChar) <*> (space *> string "->" *> space *> expr)
   pure $ At (SrcPos pos) e
 
+-- literatures
+integer :: Parser Expr
+integer = do
+  num <- Lx.decimal
+  pos <- getSourcePos
+  pure $ At (SrcPos pos) (Lit $ Int num)
+
+literature :: Parser Expr
+literature = integer
+
+-- terms
+var :: Parser Expr
+var = do
+  sym <- some (alphaNumChar <|> symbolChar)
+  when (sym `elem` reserved) (failure Nothing SE.empty)
+  pos <- getSourcePos
+  pure $ At (SrcPos pos) (Var sym)
+
+
 term :: Parser Expr
-term =  var <|> lambda <|> parens expr
+term =  literature <|> var <|> lambda <|> parens expr
 
 apply :: Parser Expr
 apply = do

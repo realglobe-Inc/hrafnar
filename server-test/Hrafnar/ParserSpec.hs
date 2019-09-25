@@ -8,18 +8,21 @@ import           Hrafnar.Types
 
 import           Test.Hspec
 
-import Text.Megaparsec
+import           Data.Void
+import           Text.Megaparsec
+
+parseExpr :: String -> Either (ParseErrorBundle String Void) Expr
+parseExpr = parse exprParser "ParserSpec"
 
 spec :: Spec
 spec = do
   describe "if" $ do
     it "parse if" $
-       fromExpr <$> parse exprParser "ParserSpec" "if x then y else z"
+       fromExpr <$> parseExpr "if x then y else z"
        `shouldBe`
        Right (If' (Var' "x") (Var' "y") (Var' "z"))
-{-
     it "if has right assoc" $
-      fromExpr <$> runAlex "if x then y else f z" exprParser
+      fromExpr <$> parseExpr "if x then y else f z"
       `shouldBe`
       Right (If' (Var' "x") (Var' "y") (Apply' (Var' "f") (Var' "z")))
 
@@ -39,6 +42,7 @@ spec = do
     --   let Right result = fst <$> evalRWST (compile exp) defaultSituation initialState
     --   result `shouldBe` Tuple []
 
+{-
 
   describe "case" $ do
 
@@ -79,20 +83,25 @@ spec = do
   describe "let in" $
 
     it "parse let in" $
-      fromExpr <$> runAlex "let x = 1; y = 2 in x + y" p
+      fromExpr <$> parseExpr
+      ( "let\n" <>
+        "  x = 1\n" <>
+        "  y = 2\n" <>
+        "in x + y"
+      )
       `shouldBe`
       Right (Let' [ExprDecl' "x" (Lit' $ Int' 1), ExprDecl' "y" (Lit' $ Int' 2)] (Apply' (Apply' (Var' "+") (Var' "x")) (Var' "y")))
 
-
+-}
   describe "apply" $ do
 
     it "pass multipul args" $
-      fromExpr <$> runAlex "f 1 2" p
+      fromExpr <$> parseExpr "f 1 2"
       `shouldBe`
       Right (Apply' (Apply' (Var' "f") (Lit' $ Int' 1)) (Lit' $ Int' 2))
 
     it "pass paren as first arg" $
-      fromExpr <$> runAlex "f (g 1) 1" p
+      fromExpr <$> parseExpr "f (g 1) 1"
       `shouldBe`
       Right (Apply'
              (Apply' (Var' "f") (Apply' (Var' "g") (Lit' $ Int' 1)))
@@ -100,13 +109,13 @@ spec = do
             )
 
     it "pass paren as second arg" $
-      fromExpr <$> runAlex "f 1 (g 1)" exprParser
+      fromExpr <$> parseExpr "f 1 (g 1)"
       `shouldBe`
       Right (Apply'
              (Apply' (Var' "f") (Lit' $ Int' 1))
              (Apply' (Var' "g") (Lit' $ Int' 1))
             )
-
+{-
   describe "lambda" $
 
     it "multi args lambda" $

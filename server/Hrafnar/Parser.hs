@@ -54,6 +54,13 @@ spaces = many $ char ' '
 spaces1 :: Parser String
 spaces1 = some $ char ' '
 
+-- signatures
+varName :: Parser String
+varName = do
+  x <- lowerChar
+  xs <- some (alphaNumChar <|> char '_' <|> char '\'' )
+  pure $ x : xs
+
 -- control expressions
 ifExpr :: Parser Expr
 ifExpr = do
@@ -67,7 +74,7 @@ lambda = do
   args <- between
           (between spaces spaces $ string (\\))
           (between spaces spaces $ string (-->))
-           $ some alphaNumChar `sepEndBy1` spaces1
+           $ varName `sepEndBy1` spaces1
   e <- expr
   pure $ go pos e args
     where
@@ -88,7 +95,7 @@ literature = integer
 -- terms
 var :: Parser Expr
 var = do
-  sym <- some (alphaNumChar <|> symbolChar)
+  sym <- varName
   when (sym `elem` reserved) (failure Nothing SE.empty)
   pos <- getSourcePos
   pure $ At (SrcPos pos) (Var sym)

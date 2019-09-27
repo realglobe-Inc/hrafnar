@@ -115,15 +115,16 @@ spec = do
              (Apply' (Var' "f") (Lit' $ Int' 1))
              (Apply' (Var' "g") (Lit' $ Int' 1))
             )
-{-
+
   describe "lambda" $
 
     it "multi args lambda" $
-      fromExpr <$> runAlex "\\x y -> x" exprParser
+      fromExpr <$> parseExpr "\\x y -> x"
       `shouldBe`
       Right (Lambda' "x" (Lambda' "y" (Var' "x")))
 
 
+{-
   describe "type annotation" $ do
 
     it "single" $

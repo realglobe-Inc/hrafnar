@@ -28,12 +28,14 @@ import qualified Text.Megaparsec.Char.Lexer as Lx
 type Parser = Parsec Void String
 
 -- | Reserved words.
-if_, then_, else_, let_, in_ :: String
+if_, then_, else_, let_, in_, (\\), (-->) :: String
 if_ = "if"
 then_ = "then"
 else_ = "else"
 let_ = "let"
 in_ = "in"
+(\\) = "\\"
+(-->) = "->"
 
 -- | List of reserved words.
 reserved :: [String]
@@ -45,6 +47,13 @@ reserved =
   , in_
   ]
 
+-- spaces
+spaces :: Parser String
+spaces = many $ char ' '
+
+spaces1 :: Parser String
+spaces1 = some $ char ' '
+
 -- control expressions
 ifExpr :: Parser Expr
 ifExpr = do
@@ -55,8 +64,16 @@ ifExpr = do
 lambda :: Parser Expr
 lambda = do
   pos <- getSourcePos
-  e <- Lambda <$> (char '\\' >> space *> some letterChar) <*> (space *> string "->" *> space *> expr)
-  pure $ At (SrcPos pos) e
+  args <- between
+          (between spaces spaces $ string (\\))
+          (between spaces spaces $ string (-->))
+           $ some alphaNumChar `sepEndBy1` spaces1
+  e <- expr
+  pure $ go pos e args
+    where
+      go _ e []     = e
+      go p e (a:as) = At (SrcPos p) $ Lambda a $ go p e as
+
 
 -- literatures
 integer :: Parser Expr
@@ -91,9 +108,6 @@ apply = do
       op <- lexeme $ pure (\e1 e2 -> At (SrcPos pos) (Apply e1 e2))
       rhs <- term
       loop $ op lhs rhs
-spaces :: Parser String
-spaces = many $ char ' '
-
 
 expr :: Parser Expr
 expr = between spaces spaces $ ifExpr <|> apply <|> term

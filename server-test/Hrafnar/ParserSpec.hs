@@ -62,20 +62,20 @@ spec = do
       `shouldBe`
       Right (Do' [Lit' $ Int' 1, Lit' $ Int' 2, Lit' $ Int' 3])
 
+-}
+    context "let in" $
 
-  describe "let in" $
-
-    it "parse let in" $
+      it "parse let in" $
       fromExpr <$> parseExpr
       ( "let\n" <>
         "  x = 1\n" <>
         "  y = 2\n" <>
-        "in x + y"
+        "in x"
       )
       `shouldBe`
-      Right (Let' [ExprDecl' "x" (Lit' $ Int' 1), ExprDecl' "y" (Lit' $ Int' 2)] (Apply' (Apply' (Var' "+") (Var' "x")) (Var' "y")))
+      Right (Let' [ExprDecl' "x" (Lit' $ Int' 1), ExprDecl' "y" (Lit' $ Int' 2)] (Var' "x"))
 
--}
+
     context "apply" $ do
 
       it "pass multipul args" $
@@ -110,10 +110,7 @@ spec = do
   describe "declarations" $
 
     it "expression delaration" $
-    fromDecl <$> parseDecl
-    ( "x = 1\n" <>
-      "y = 2"
-    )
+    fromDecl <$> parseDecl "x = 1"
     `shouldBe`
     Right
     (ExprDecl' "x" (Lit' $ Int' 1))

@@ -39,8 +39,8 @@ let_ = "let"
 in_ = "in"
 
 -- | List of reserved words.
-reserved :: [String]
-reserved =
+reservedWords :: [String]
+reservedWords =
   [ if_
   , then_
   , else_
@@ -53,6 +53,14 @@ reserved =
 (-\) = "\\"
 (-->) = "->"
 (-=) = "="
+
+-- | List of reserved symbols.
+reservedSymbols :: [String]
+reservedSymbols =
+  [ (-\)
+  , (-->)
+  , (-=)
+  ]
 
 -- misc
 sp :: Parser Char
@@ -73,6 +81,9 @@ parens = between (char '(' <* space) (space *> char ')')
 lineComment :: Parser ()
 lineComment = Lx.skipLineComment "--"
 
+--blockComment :: Parser ()
+--blockComment = Lx.skipBlockCommentNested
+
 scn :: Parser ()
 scn = Lx.space space1 lineComment empty
 
@@ -84,6 +95,7 @@ varName :: Parser String
 varName = do
   x <- lowerChar
   xs <- many (alphaNumChar <|> char '_' <|> char '\'' )
+  when (x : xs `elem` reservedWords) (failure Nothing SE.empty)
   pure $ x : xs
 
 -- control expressions
@@ -106,6 +118,26 @@ lambda = do
       go _ e []     = e
       go p e (a:as) = At (SrcPos p) $ Lambda a $ go p e as
 
+letExpr :: Parser Expr
+letExpr =
+  let
+    inlineLetIn = string let_ *> sc *> ((:[]) <$> decl) <* sc <* string in_
+    blockLetIn = Lx.indentBlock scn (string let_ *> spaces $> Lx.IndentSome Nothing pure decl) <* string in_
+    extractLet p = do
+      (ds, e:es) <- Lx.indentBlock scn (
+        do
+          decls <- p
+          pure $  Lx.IndentSome Nothing (\exprs -> pure (decls, exprs)) expr
+        )
+      unless (L.null es) $ failure Nothing SE.empty
+      pure $ Let ds e
+  in do
+    pos <- getSourcePos
+    try (At (SrcPos pos) <$> (Let <$> inlineLetIn <*> expr)) <|>
+      try (At (SrcPos pos) <$> extractLet inlineLetIn) <|>
+      try (At (SrcPos pos) <$> (Let <$> blockLetIn <*> expr)) <|>
+      At (SrcPos pos) <$> extractLet blockLetIn
+
 
 -- literatures
 integer :: Parser Expr
@@ -120,10 +152,9 @@ literature = integer
 -- terms
 var :: Parser Expr
 var = do
-  sym <- varName
-  when (sym `elem` reserved) (failure Nothing SE.empty)
+  name <- varName
   pos <- getSourcePos
-  pure $ At (SrcPos pos) (Var sym)
+  pure $ At (SrcPos pos) (Var name)
 
 
 term :: Parser Expr
@@ -142,17 +173,16 @@ apply = do
       loop $ op lhs rhs
 
 expr :: Parser Expr
-expr = trim $ ifExpr <|> apply <|> term
+expr = trim $ ifExpr <|> letExpr <|> apply <|> term
 
 -- declarations
 exprDecl :: Parser Decl
 exprDecl = do
-  sym <- varName
-  when (sym `elem` reserved) (failure Nothing SE.empty)
+  name <- varName
   _ <- trim $ string (-=)
   e <- expr
   pos <- getSourcePos
-  pure . At (SrcPos pos) $ ExprDecl sym e
+  pure . At (SrcPos pos) $ ExprDecl name e
 
 typeAnno :: Parser Decl
 typeAnno = undefined

@@ -16,14 +16,22 @@ spec = do
   describe "expressions" $ do
 
     context "if" $ do
+      
       it "parse if" $
+        
         fromExpr <$> parseExpr "if x then y else z"
         `shouldBe`
         Right (If' (Var' "x") (Var' "y") (Var' "z"))
+        
       it "if has right assoc" $
         fromExpr <$> parseExpr "if x then y else f z"
         `shouldBe`
         Right (If' (Var' "x") (Var' "y") (Apply' (Var' "f") (Var' "z")))
+
+      it "with comments" $
+        fromExpr <$> parseExpr "if{-spam-}x{-spam-} then{-spam-} y {-spam-}else{-spam-} z -- spam"
+        `shouldBe`
+        Right (If' (Var' "x") (Var' "y") (Var' "z"))
 
 {-
 
@@ -63,18 +71,27 @@ spec = do
       Right (Do' [Lit' $ Int' 1, Lit' $ Int' 2, Lit' $ Int' 3])
 
 -}
-    context "let in" $
+    context "let in" $ do
 
       it "parse let in" $
-      fromExpr <$> parseExpr
-      ( "let\n" <>
-        "  x = 1\n" <>
-        "  y = 2\n" <>
-        "in x"
-      )
-      `shouldBe`
-      Right (Let' [ExprDecl' "x" (Lit' $ Int' 1), ExprDecl' "y" (Lit' $ Int' 2)] (Var' "x"))
+        fromExpr <$> parseExpr
+        ( "let\n" <>
+          "  x = 1\n" <>
+          "  y = 2\n" <>
+          "in x"
+        )
+        `shouldBe`
+        Right (Let' [ExprDecl' "x" (Lit' $ Int' 1), ExprDecl' "y" (Lit' $ Int' 2)] (Var' "x"))
 
+      it "with comments" $
+        fromExpr <$> parseExpr
+        ( "let--spam\n" <>
+          "  x{-spam-}={-spam-}{-spam-} 1 -- spam\n" <>
+          "  y {-spam-}={-spam-}2{-spam-}\n" <>
+          "in{-spam-}x"
+        )
+        `shouldBe`
+        Right (Let' [ExprDecl' "x" (Lit' $ Int' 1), ExprDecl' "y" (Lit' $ Int' 2)] (Var' "x"))
 
     context "apply" $ do
 
@@ -99,22 +116,32 @@ spec = do
                (Apply' (Var' "g") (Lit' $ Int' 1))
               )
 
-    context "lambda" $
+    context "lambda" $ do
 
       it "multi args lambda" $
-      fromExpr <$> parseExpr "\\x y -> x"
-      `shouldBe`
-      Right (Lambda' "x" (Lambda' "y" (Var' "x")))
+        fromExpr <$> parseExpr "\\x y -> x"
+        `shouldBe`
+        Right (Lambda' "x" (Lambda' "y" (Var' "x")))
+
+      it "lambda with comments" $
+        fromExpr <$> parseExpr "\\{-spam-}x {-spam-}y {-spam-}-> {-spam-}x -- spam"
+        `shouldBe`
+        Right (Lambda' "x" (Lambda' "y" (Var' "x")))
 
 
-  describe "declarations" $
+  describe "declarations" $ do
 
     it "expression delaration" $
-    fromDecl <$> parseDecl "x = 1"
-    `shouldBe`
-    Right
-    (ExprDecl' "x" (Lit' $ Int' 1))
+      fromDecl <$> parseDecl "x = 1"
+      `shouldBe`
+      Right
+      (ExprDecl' "x" (Lit' $ Int' 1))
 
+    it "expression delaration with comments" $
+      fromDecl <$> parseDecl "x{- spam -} = {- spam -} 1 -- spam"
+      `shouldBe`
+      Right
+      (ExprDecl' "x" (Lit' $ Int' 1))
 {-
   describe "type annotation" $ do
 

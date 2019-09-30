@@ -81,14 +81,20 @@ parens = between (char '(' <* space) (space *> char ')')
 lineComment :: Parser ()
 lineComment = Lx.skipLineComment "--"
 
---blockComment :: Parser ()
---blockComment = Lx.skipBlockCommentNested
+blockComment :: Parser ()
+blockComment = Lx.skipBlockCommentNested "{-" "-}"
+
+symbol :: String -> Parser String
+symbol = trim . Lx.symbol sc
+
+lexeme :: Parser a -> Parser a
+lexeme = Lx.lexeme sc
 
 scn :: Parser ()
 scn = Lx.space space1 lineComment empty
 
 sc :: Parser () -- sc means space copnsumer
-sc = Lx.space (void spaces1) lineComment empty
+sc = Lx.space (void spaces1) lineComment blockComment
 
 -- signatures
 varName :: Parser String
@@ -102,16 +108,16 @@ varName = do
 ifExpr :: Parser Expr
 ifExpr = do
   pos <- getSourcePos
-  e <- If <$> (string if_ *> expr) <*> (string then_ *> expr) <*> (string else_ *> expr)
+  e <- If <$> (symbol if_ *> expr) <*> (symbol then_ *> expr) <*> (symbol else_ *> expr)
   pure $ At (SrcPos pos) e
 
 lambda :: Parser Expr
 lambda = do
   pos <- getSourcePos
   args <- between
-          (trim $ string (-\))
-          (trim $ string (-->))
-           $ varName `sepEndBy1` spaces1
+          (symbol (-\))
+          (symbol (-->))
+           $ varName `sepEndBy1` sc
   e <- expr
   pure $ go pos e args
     where
@@ -121,8 +127,8 @@ lambda = do
 letExpr :: Parser Expr
 letExpr =
   let
-    inlineLetIn = string let_ *> sc *> ((:[]) <$> decl) <* sc <* string in_
-    blockLetIn = Lx.indentBlock scn (string let_ *> spaces $> Lx.IndentSome Nothing pure decl) <* string in_
+    inlineLetIn = symbol let_ *> sc *> ((:[]) <$> decl) <* sc <* symbol in_
+    blockLetIn = Lx.indentBlock scn (symbol let_ *> spaces $> Lx.IndentSome Nothing pure decl) <* symbol in_
     extractLet p = do
       (ds, e:es) <- Lx.indentBlock scn (
         do
@@ -142,7 +148,7 @@ letExpr =
 -- literatures
 integer :: Parser Expr
 integer = do
-  num <- Lx.decimal
+  num <- lexeme Lx.decimal
   pos <- getSourcePos
   pure $ At (SrcPos pos) (Lit $ Int num)
 
@@ -152,7 +158,7 @@ literature = integer
 -- terms
 var :: Parser Expr
 var = do
-  name <- varName
+  name <- lexeme varName
   pos <- getSourcePos
   pure $ At (SrcPos pos) (Var name)
 
@@ -178,8 +184,8 @@ expr = trim $ ifExpr <|> letExpr <|> apply <|> term
 -- declarations
 exprDecl :: Parser Decl
 exprDecl = do
-  name <- varName
-  _ <- trim $ string (-=)
+  name <- lexeme varName
+  _ <- symbol (-=)
   e <- expr
   pos <- getSourcePos
   pure . At (SrcPos pos) $ ExprDecl name e
@@ -193,9 +199,6 @@ dataDecl = undefined
 decl :: Parser Decl
 decl = exprDecl -- <|> typeAnno <|> dataDecl
 
-
-lexeme :: Parser a -> Parser a
-lexeme = Lx.lexeme sc
 
 exprParser :: Parser Expr
 exprParser = expr

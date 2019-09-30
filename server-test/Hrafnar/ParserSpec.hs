@@ -11,36 +11,19 @@ import           Test.Hspec
 import           Data.Void
 import           Text.Megaparsec
 
-parseExpr :: String -> Either (ParseErrorBundle String Void) Expr
-parseExpr = parse exprParser "ParserSpec"
-
 spec :: Spec
 spec = do
-  describe "if" $ do
-    it "parse if" $
-       fromExpr <$> parseExpr "if x then y else z"
-       `shouldBe`
-       Right (If' (Var' "x") (Var' "y") (Var' "z"))
-    it "if has right assoc" $
-      fromExpr <$> parseExpr "if x then y else f z"
-      `shouldBe`
-      Right (If' (Var' "x") (Var' "y") (Apply' (Var' "f") (Var' "z")))
+  describe "expressions" $ do
 
---  describe "tuple" $ do
-
-    -- it "tuple" $ do
-    --   let p = alexSetUserState (AlexUserState MA.empty MA.empty) >> parser
-    --   let Right decls = runAlex "(1,2)" p
-    --   let Just expr = lookupExpr "main" decls
-    --   let Right result = fst <$> evalRWST (compile exp) defaultSituation initialState
-    --   result `shouldBe` Tuple [Lit $ Int 1, Lit $ Int 2]
-    --
-    -- it "empty tuple" $ do
-    --   let p = alexSetUserState (AlexUserState MA.empty MA.empty) >> parser
-    --   let Right decls = runAlex "()" p
-    --   let Just expr = lookupExpr "main" decls
-    --   let Right result = fst <$> evalRWST (compile exp) defaultSituation initialState
-    --   result `shouldBe` Tuple []
+    context "if" $ do
+      it "parse if" $
+        fromExpr <$> parseExpr "if x then y else z"
+        `shouldBe`
+        Right (If' (Var' "x") (Var' "y") (Var' "z"))
+      it "if has right assoc" $
+        fromExpr <$> parseExpr "if x then y else f z"
+        `shouldBe`
+        Right (If' (Var' "x") (Var' "y") (Apply' (Var' "f") (Var' "z")))
 
 {-
 
@@ -93,36 +76,47 @@ spec = do
       Right (Let' [ExprDecl' "x" (Lit' $ Int' 1), ExprDecl' "y" (Lit' $ Int' 2)] (Apply' (Apply' (Var' "+") (Var' "x")) (Var' "y")))
 
 -}
-  describe "apply" $ do
+    context "apply" $ do
 
-    it "pass multipul args" $
-      fromExpr <$> parseExpr "f 1 2"
-      `shouldBe`
-      Right (Apply' (Apply' (Var' "f") (Lit' $ Int' 1)) (Lit' $ Int' 2))
+      it "pass multipul args" $
+        fromExpr <$> parseExpr "f 1 2"
+        `shouldBe`
+        Right (Apply' (Apply' (Var' "f") (Lit' $ Int' 1)) (Lit' $ Int' 2))
 
-    it "pass paren as first arg" $
-      fromExpr <$> parseExpr "f (g 1) 1"
-      `shouldBe`
-      Right (Apply'
-             (Apply' (Var' "f") (Apply' (Var' "g") (Lit' $ Int' 1)))
-             (Lit' $ Int' 1)
+      it "pass paren as first arg" $
+        fromExpr <$> parseExpr "f (g 1) 1"
+        `shouldBe`
+        Right (Apply'
+               (Apply' (Var' "f") (Apply' (Var' "g") (Lit' $ Int' 1)))
+               (Lit' $ Int' 1)
             )
 
-    it "pass paren as second arg" $
-      fromExpr <$> parseExpr "f 1 (g 1)"
-      `shouldBe`
-      Right (Apply'
-             (Apply' (Var' "f") (Lit' $ Int' 1))
-             (Apply' (Var' "g") (Lit' $ Int' 1))
-            )
+      it "pass paren as second arg" $
+        fromExpr <$> parseExpr "f 1 (g 1)"
+        `shouldBe`
+        Right (Apply'
+               (Apply' (Var' "f") (Lit' $ Int' 1))
+               (Apply' (Var' "g") (Lit' $ Int' 1))
+              )
 
-  describe "lambda" $
+    context "lambda" $
 
-    it "multi args lambda" $
+      it "multi args lambda" $
       fromExpr <$> parseExpr "\\x y -> x"
       `shouldBe`
       Right (Lambda' "x" (Lambda' "y" (Var' "x")))
 
+
+  describe "declarations" $
+
+    it "expression delaration" $
+    fromDecl <$> parseDecl
+    ( "x = 1\n" <>
+      "y = 2"
+    )
+    `shouldBe`
+    Right
+    (ExprDecl' "x" (Lit' $ Int' 1))
 
 {-
   describe "type annotation" $ do
@@ -187,6 +181,12 @@ data LitSrc
   | Tuple' [ExprSrc]
   deriving (Show, Eq)
 
+parseExpr :: String -> Either (ParseErrorBundle String Void) Expr
+parseExpr = parse exprParser "ParserSpec"
+
+parseDecl :: String -> Either (ParseErrorBundle String Void) Decl
+parseDecl = parse declParser "ParserSpec"
+
 fromExpr :: Expr -> ExprSrc
 fromExpr (At _ expr) = fromExpr' expr
   where
@@ -206,12 +206,15 @@ fromExpr (At _ expr) = fromExpr' expr
     fromPat (At _ (PCons p ps)) = PCons' (fromPat p) (fromPat ps)
     fromPat (At _ PWildcard)    = PWildcard'
 
-    fromDecl (ExprDecl n e)     = ExprDecl' n $ fromExpr e
-    fromDecl (DataDecl n as ds) = DataDecl' n as ds
-    fromDecl (TypeAnno n t)     = TypeAnno' n t
-
     fromLit (Bool b)      = Lit' . Bool' $ b
     fromLit (Int i)       = Lit' . Int' $ i
     fromLit (Tuple exprs) = Lit' . Tuple' $ fmap fromExpr exprs
 
     unLit (Lit' l) = l
+
+fromDecl :: Decl -> DeclSrc
+fromDecl (At _ decl) = fromDecl' decl
+  where
+    fromDecl' (ExprDecl n expr) = ExprDecl' n $ fromExpr expr
+    fromDecl' (DataDecl n ns cs) = DataDecl' n ns cs
+    fromDecl' (TypeAnno ns typ) = TypeAnno' ns typ

@@ -16,7 +16,8 @@ module Hrafnar.AST
   , Pat
   , Pat'(..)
   , DataDecl
-  , Decl(..)
+  , Decl'(..)
+  , Decl
   , Line(..)
   , extractExprs
   , extractTypes
@@ -88,11 +89,13 @@ data Pat'
 
 -- | Declaration.
 type DataDecl = (Name, ([Name], [(Name, Type)]))
-data Decl
+data Decl'
   = ExprDecl Name Expr
   | DataDecl Name [Name] [(Name, Type)]
   | TypeAnno [Name] Type
   deriving (Eq, Show)
+
+type Decl = Located Decl'
 
 -- | For REPL.
 data Line
@@ -102,17 +105,17 @@ data Line
 
 extractExprs :: [Decl] -> [(Name, Expr)]
 extractExprs []                = []
-extractExprs (ExprDecl n e:ds) = (n, e) : extractExprs ds
+extractExprs (At _ (ExprDecl n e):ds) = (n, e) : extractExprs ds
 extractExprs (_:ds)            = extractExprs ds
 
 extractTypes :: [Decl] -> [(Name, Type)]
 extractTypes []                 = []
-extractTypes (TypeAnno ns t:ds) = fmap (, t) ns <> extractTypes ds
+extractTypes (At _ (TypeAnno ns t):ds) = fmap (, t) ns <> extractTypes ds
 extractTypes (_:ds)             = extractTypes ds
 
 extractData :: [Decl] -> [DataDecl]
 extractData []                    = []
-extractData (DataDecl n as vs:ds) = (n, (as, vs)) : extractData ds
+extractData (At _ (DataDecl n as vs):ds) = (n, (as, vs)) : extractData ds
 extractData (_:ds)                = extractData ds
 
 binop :: Expr -> ((String, Int, OpAssoc), Position) -> Expr -> Expr

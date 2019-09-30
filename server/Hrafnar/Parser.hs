@@ -9,8 +9,9 @@ Maintainer  : REALGLOBE INC.
 
 module Hrafnar.Parser
   ( exprParser
-  , declsParser
+  , declParser
   , lineParser
+  , declsParser
   ) where
 
 import           Hrafnar.Annotation
@@ -27,15 +28,15 @@ import qualified Text.Megaparsec.Char.Lexer as Lx
 
 type Parser = Parsec Void String
 
+declsParser = undefined -- FIXME: temporary definition
+
 -- | Reserved words.
-if_, then_, else_, let_, in_, (\\), (-->) :: String
+if_, then_, else_, let_, in_ :: String
 if_ = "if"
 then_ = "then"
 else_ = "else"
 let_ = "let"
 in_ = "in"
-(\\) = "\\"
-(-->) = "->"
 
 -- | List of reserved words.
 reserved :: [String]
@@ -47,9 +48,15 @@ reserved =
   , in_
   ]
 
--- spaces
+-- | Reserved symbols.
+(-\), (-->), (-=) :: String
+(-\) = "\\"
+(-->) = "->"
+(-=) = "="
+
+-- misc
 sp :: Parser Char
-sp = char ' ' <|> char '\''
+sp = char ' ' <|> char '\t'
 
 spaces :: Parser String
 spaces = many sp
@@ -62,6 +69,15 @@ trim = between spaces spaces
 
 parens :: Parser Expr -> Parser Expr
 parens = between (char '(' <* space) (space *> char ')')
+
+lineComment :: Parser ()
+lineComment = Lx.skipLineComment "--"
+
+scn :: Parser ()
+scn = Lx.space space1 lineComment empty
+
+sc :: Parser () -- sc means space copnsumer
+sc = Lx.space (void spaces1) lineComment empty
 
 -- signatures
 varName :: Parser String
@@ -81,7 +97,7 @@ lambda :: Parser Expr
 lambda = do
   pos <- getSourcePos
   args <- between
-          (trim $ string (\\))
+          (trim $ string (-\))
           (trim $ string (-->))
            $ varName `sepEndBy1` spaces1
   e <- expr
@@ -128,16 +144,25 @@ apply = do
 expr :: Parser Expr
 expr = trim $ ifExpr <|> apply <|> term
 
+-- declarations
+exprDecl :: Parser Decl
+exprDecl = do
+  sym <- varName
+  when (sym `elem` reserved) (failure Nothing SE.empty)
+  _ <- trim $ string (-=)
+  e <- expr
+  pos <- getSourcePos
+  pure . At (SrcPos pos) $ ExprDecl sym e
 
+typeAnno :: Parser Decl
+typeAnno = undefined
 
-lineComment :: Parser ()
-lineComment = Lx.skipLineComment "--"
+dataDecl :: Parser Decl
+dataDecl = undefined
 
-scn :: Parser ()
-scn = Lx.space space1 lineComment empty
+decl :: Parser Decl
+decl = exprDecl -- <|> typeAnno <|> dataDecl
 
-sc :: Parser ()
-sc = Lx.space (void $ some (char ' ' <|> char '\t')) lineComment empty
 
 lexeme :: Parser a -> Parser a
 lexeme = Lx.lexeme sc
@@ -145,8 +170,8 @@ lexeme = Lx.lexeme sc
 exprParser :: Parser Expr
 exprParser = expr
 
-declsParser :: Parser [Decl]
-declsParser = undefined
+declParser :: Parser Decl
+declParser = decl
 
 lineParser :: Parser Line
 lineParser = undefined

@@ -59,10 +59,10 @@ interpretExpr e  = do
   outputStrLn . show . view _1 $ appEndo t (defaultSituation ^. #context, [])
 
 interpretDecl :: Decl -> Interpret
-interpretDecl TypeAnno{} = outputStrLn "unavailable to declare type only"
-interpretDecl (ExprDecl n e) = do
+interpretDecl (At _ (TypeAnno{})) = outputStrLn "unavailable to declare type only"
+interpretDecl (At _ (ExprDecl n e)) = do
   env <- lift get
-  sc <- lift $ infer (typeEnv env) (withDummy $ Let [ExprDecl n e] (withDummy $ Var n))
+  sc <- lift $ infer (typeEnv env) (withDummy $ Let [withDummy $ ExprDecl n e] (withDummy $ Var n))
   (v,_) <- lift $ evalRWST (compile e) defaultSituation (initialState & #venv .~ valEnv env)
   lift . modify $ \Env{..} ->
     Env (MA.insert n v valEnv) (MA.insert n sc typeEnv)

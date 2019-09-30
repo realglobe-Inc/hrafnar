@@ -111,9 +111,9 @@ compile (At _ expr) = compile' expr
       Let ds e ->
         let
           letInBind [] expr' = compile expr'
-          letInBind (ExprDecl n e':ds') expr' =
+          letInBind (At _ (ExprDecl n e'):ds') expr' =
             liftA2 VApp (abstract n <$> (letInBind ds' expr')) (compile e')
-          letInBind (TypeAnno{}:ds') expr' = letInBind ds' expr'
+          letInBind (At _ (TypeAnno{}):ds') expr' = letInBind ds' expr'
         in
           letInBind ds e
       If cond x y -> foldl VApp (VVar "if") <$> traverse compile [cond, x, y]

@@ -16,6 +16,7 @@ module Hrafnar.Parser
 
 import           Hrafnar.Annotation
 import           Hrafnar.AST
+import           Hrafnar.Types
 
 import           Control.Monad
 import           Data.Functor
@@ -49,10 +50,12 @@ reservedWords =
   ]
 
 -- | Reserved symbols.
-(-\), (-->), (-=) :: String
+(-\), (-->), (-=), (-:), comma :: String
 (-\) = "\\"
 (-->) = "->"
 (-=) = "="
+(-:) = ":"
+comma = ","
 
 -- | List of reserved symbols.
 reservedSymbols :: [String]
@@ -60,6 +63,8 @@ reservedSymbols =
   [ (-\)
   , (-->)
   , (-=)
+  , (-:)
+  , comma
   ]
 
 -- misc
@@ -103,6 +108,16 @@ varName = do
   xs <- many (alphaNumChar <|> char '_' <|> char '\'' )
   when (x : xs `elem` reservedWords) (failure Nothing SE.empty)
   pure $ x : xs
+
+typeName :: Parser String
+typeName = do
+  x <- upperChar
+  xs <- many (alphaNumChar <|> char '_' <|> char '\'' )
+  when (x : xs `elem` reservedWords) (failure Nothing SE.empty)
+  pure $ x : xs
+  
+dataName :: Parser String
+dataName = typeName
 
 -- control expressions
 ifExpr :: Parser Expr
@@ -191,13 +206,19 @@ exprDecl = do
   pure . At (SrcPos pos) $ ExprDecl name e
 
 typeAnno :: Parser Decl
-typeAnno = undefined
+typeAnno = do
+  names <- lexeme varName `sepBy1` symbol comma
+  _ <- symbol (-:)
+  typ <- lexeme typeName
+  pos <- getSourcePos
+  pure . At (SrcPos pos) $ TypeAnno names (TyCon typ)
+  
 
 dataDecl :: Parser Decl
 dataDecl = undefined
 
 decl :: Parser Decl
-decl = exprDecl -- <|> typeAnno <|> dataDecl
+decl = try exprDecl <|> typeAnno -- <|> dataDecl
 
 
 exprParser :: Parser Expr

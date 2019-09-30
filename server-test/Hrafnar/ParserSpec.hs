@@ -131,31 +131,34 @@ spec = do
 
   describe "declarations" $ do
 
-    it "expression delaration" $
-      fromDecl <$> parseDecl "x = 1"
-      `shouldBe`
-      Right
-      (ExprDecl' "x" (Lit' $ Int' 1))
+    context "expression" $ do
+      it "expression delaration" $
+        fromDecl <$> parseDecl "x = 1"
+        `shouldBe`
+        Right
+        (ExprDecl' "x" (Lit' $ Int' 1))
 
-    it "expression delaration with comments" $
-      fromDecl <$> parseDecl "x{- spam -} = {- spam -} 1 -- spam"
-      `shouldBe`
-      Right
-      (ExprDecl' "x" (Lit' $ Int' 1))
+      it "expression delaration with comments" $
+        fromDecl <$> parseDecl "x{- spam -} = {- spam -} 1 -- spam"
+        `shouldBe`
+        Right
+        (ExprDecl' "x" (Lit' $ Int' 1))
+
+      
+    context "type annotation" $ do
+
+      it "single" $
+        fromDecl <$> parseDecl "foo : Int"
+        `shouldBe`
+        Right (TypeAnno' ["foo"] tyInt)
+
+
+      it "multi" $
+        fromDecl <$> parseDecl  "foo, bar, baz : String"
+        `shouldBe`
+        Right (TypeAnno' ["foo", "bar", "baz"] tyString)
+
 {-
-  describe "type annotation" $ do
-
-    it "single" $
-      runAlex "foo : Int" declParser
-      `shouldBe`
-      Right (TypeAnno ["foo"] tyInt)
-
-
-    it "multi" $
-      runAlex "foo, bar, baz : String" declParser
-      `shouldBe`
-      Right (TypeAnno ["foo", "bar", "baz"] tyString)
-
 
   describe "data constructor" $ do
     it "basic" $

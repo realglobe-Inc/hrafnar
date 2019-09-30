@@ -19,29 +19,32 @@ spec = do
       
       it "parse if" $
         
-        fromExpr <$> parseExpr "if x then y else z"
+        parseExpr "if x then y else z"
         `shouldBe`
         Right (If' (Var' "x") (Var' "y") (Var' "z"))
         
       it "if has right assoc" $
-        fromExpr <$> parseExpr "if x then y else f z"
+        parseExpr "if x then y else f z"
         `shouldBe`
         Right (If' (Var' "x") (Var' "y") (Apply' (Var' "f") (Var' "z")))
 
       it "with comments" $
-        fromExpr <$> parseExpr "if{-spam-}x{-spam-} then{-spam-} y {-spam-}else{-spam-} z -- spam"
+        parseExpr "if{-spam-}x{-spam-} then{-spam-} y {-spam-}else{-spam-} z -- spam"
         `shouldBe`
         Right (If' (Var' "x") (Var' "y") (Var' "z"))
 
+
+    context "case" $ do
+    
+      it "simple" $
+        parseExpr
+        ( "case x of\n" <>
+          "  x -> 1"
+        )
+        `shouldBe`
+        Right (Case' (Var' "x") [(PVar' "x", Lit' $ Int' 1)])
+
 {-
-
-  describe "case" $ do
-
-    it "simple" $
-      fromExpr <$> runAlex "case x of { x -> 1 }" exprParser
-      `shouldBe`
-      Right (Case' (Var' "x") [(PVar' "x", Lit' $ Int' 1)])
-
     it "wild card" $
       fromExpr <$> runAlex "case x of { 1 -> 1; _ -> 2 }" exprParser
       `shouldBe`
@@ -74,7 +77,7 @@ spec = do
     context "let in" $ do
 
       it "parse let in" $
-        fromExpr <$> parseExpr
+        parseExpr
         ( "let\n" <>
           "  x = 1\n" <>
           "  y = 2\n" <>
@@ -84,7 +87,7 @@ spec = do
         Right (Let' [ExprDecl' "x" (Lit' $ Int' 1), ExprDecl' "y" (Lit' $ Int' 2)] (Var' "x"))
 
       it "with comments" $
-        fromExpr <$> parseExpr
+        parseExpr
         ( "let--spam\n" <>
           "  x{-spam-}={-spam-}{-spam-} 1 -- spam\n" <>
           "  y {-spam-}={-spam-}2{-spam-}\n" <>
@@ -96,12 +99,12 @@ spec = do
     context "apply" $ do
 
       it "pass multipul args" $
-        fromExpr <$> parseExpr "f 1 2"
+        parseExpr "f 1 2"
         `shouldBe`
         Right (Apply' (Apply' (Var' "f") (Lit' $ Int' 1)) (Lit' $ Int' 2))
 
       it "pass paren as first arg" $
-        fromExpr <$> parseExpr "f (g 1) 1"
+        parseExpr "f (g 1) 1"
         `shouldBe`
         Right (Apply'
                (Apply' (Var' "f") (Apply' (Var' "g") (Lit' $ Int' 1)))
@@ -109,7 +112,7 @@ spec = do
             )
 
       it "pass paren as second arg" $
-        fromExpr <$> parseExpr "f 1 (g 1)"
+        parseExpr "f 1 (g 1)"
         `shouldBe`
         Right (Apply'
                (Apply' (Var' "f") (Lit' $ Int' 1))
@@ -119,12 +122,12 @@ spec = do
     context "lambda" $ do
 
       it "multi args lambda" $
-        fromExpr <$> parseExpr "\\x y -> x"
+        parseExpr "\\x y -> x"
         `shouldBe`
         Right (Lambda' "x" (Lambda' "y" (Var' "x")))
 
       it "lambda with comments" $
-        fromExpr <$> parseExpr "\\{-spam-}x {-spam-}y {-spam-}-> {-spam-}x -- spam"
+        parseExpr "\\{-spam-}x {-spam-}y {-spam-}-> {-spam-}x -- spam"
         `shouldBe`
         Right (Lambda' "x" (Lambda' "y" (Var' "x")))
 
@@ -133,13 +136,13 @@ spec = do
 
     context "expression" $ do
       it "expression delaration" $
-        fromDecl <$> parseDecl "x = 1"
+        parseDecl "x = 1"
         `shouldBe`
         Right
         (ExprDecl' "x" (Lit' $ Int' 1))
 
       it "expression delaration with comments" $
-        fromDecl <$> parseDecl "x{- spam -} = {- spam -} 1 -- spam"
+        parseDecl "x{- spam -} = {- spam -} 1 -- spam"
         `shouldBe`
         Right
         (ExprDecl' "x" (Lit' $ Int' 1))
@@ -148,13 +151,13 @@ spec = do
     context "type annotation" $ do
 
       it "single" $
-        fromDecl <$> parseDecl "foo : Int"
+        parseDecl "foo : Int"
         `shouldBe`
         Right (TypeAnno' ["foo"] tyInt)
 
 
       it "multi" $
-        fromDecl <$> parseDecl  "foo, bar, baz : String"
+        parseDecl  "foo, bar, baz : String"
         `shouldBe`
         Right (TypeAnno' ["foo", "bar", "baz"] tyString)
 
@@ -162,17 +165,17 @@ spec = do
     context "data constructor" $ do
 
       it "basic" $
-        fromDecl <$> parseDecl "data Hoge = Foo | Bar"
+        parseDecl "data Hoge = Foo | Bar"
         `shouldBe`
         Right (DataDecl' "Hoge" [] [("Foo", TyCon "Hoge"), ("Bar", TyCon "Hoge")])
 
       it "with values" $
-        fromDecl <$> parseDecl "data Hoge = Foo Int String" 
+        parseDecl "data Hoge = Foo Int String" 
         `shouldBe`
         Right (DataDecl' "Hoge" [] [("Foo", TyFun tyInt (TyFun tyString (TyCon "Hoge")))])
 
       it "with type variables" $
-        fromDecl <$> parseDecl "data Hoge a = Foo a" 
+        parseDecl "data Hoge a = Foo a" 
         `shouldBe`
         Right (DataDecl' "Hoge" ["a"] [("Foo", TyFun (TyVar $ TV "a") (TyCon "Hoge"))])
 
@@ -207,11 +210,11 @@ data LitSrc
   | Tuple' [ExprSrc]
   deriving (Show, Eq)
 
-parseExpr :: String -> Either (ParseErrorBundle String Void) Expr
-parseExpr = parse exprParser "ParserSpec"
+parseExpr :: String -> Either (ParseErrorBundle String Void) ExprSrc
+parseExpr x = fromExpr <$> parse exprParser "ParserSpec" x
 
-parseDecl :: String -> Either (ParseErrorBundle String Void) Decl
-parseDecl = parse declParser "ParserSpec"
+parseDecl :: String -> Either (ParseErrorBundle String Void) DeclSrc
+parseDecl x = fromDecl <$> parse declParser "ParserSpec" x
 
 fromExpr :: Expr -> ExprSrc
 fromExpr (At _ expr) = fromExpr' expr

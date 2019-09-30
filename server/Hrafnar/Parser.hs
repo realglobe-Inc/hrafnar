@@ -32,12 +32,13 @@ type Parser = Parsec Void String
 declsParser = undefined -- FIXME: temporary definition
 
 -- | Reserved words.
-if_, then_, else_, let_, in_ :: String
+if_, then_, else_, let_, in_, data_ :: String
 if_ = "if"
 then_ = "then"
 else_ = "else"
 let_ = "let"
 in_ = "in"
+data_ = "data"
 
 -- | List of reserved words.
 reservedWords :: [String]
@@ -47,14 +48,16 @@ reservedWords =
   , else_
   , let_
   , in_
+  , data_
   ]
 
 -- | Reserved symbols.
-(-\), (-->), (-=), (-:), comma :: String
+(-\), (-->), (-=), (-:), (-|), comma :: String
 (-\) = "\\"
 (-->) = "->"
 (-=) = "="
 (-:) = ":"
+(-|) = "|"
 comma = ","
 
 -- | List of reserved symbols.
@@ -64,6 +67,7 @@ reservedSymbols =
   , (-->)
   , (-=)
   , (-:)
+  , (-|)
   , comma
   ]
 
@@ -212,13 +216,32 @@ typeAnno = do
   typ <- typeName
   pos <- getSourcePos
   pure . At (SrcPos pos) $ TypeAnno names (TyCon typ)
-  
+
+data ConParam
+  = TypeName String
+  | VarName String
 
 dataDecl :: Parser Decl
-dataDecl = undefined
+dataDecl = do
+  _ <- symbol data_
+  tyName <- dataName
+  tyVars <- varName `sepBy` sc
+  _ <- symbol (-=)
+  let  p = do
+         conName <- typeName
+         params <- (TypeName <$> typeName <|> VarName <$> varName) `sepBy` sc
+         pure (conName, foldr (\case
+                                  TypeName x -> TyFun (TyCon x)
+                                  VarName x -> TyFun (TyVar (TV x))
+                              ) (TyCon tyName) params
+              )
+  cons <- p `sepBy` symbol (-|)
+  pos <- getSourcePos
+  pure . At (SrcPos pos) $ DataDecl tyName tyVars cons
+  
 
 decl :: Parser Decl
-decl = try exprDecl <|> typeAnno -- <|> dataDecl
+decl = try exprDecl <|> try typeAnno <|> dataDecl
 
 
 exprParser :: Parser Expr

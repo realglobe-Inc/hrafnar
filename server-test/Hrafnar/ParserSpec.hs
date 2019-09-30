@@ -158,24 +158,23 @@ spec = do
         `shouldBe`
         Right (TypeAnno' ["foo", "bar", "baz"] tyString)
 
-{-
 
-  describe "data constructor" $ do
-    it "basic" $
-      runAlex "data Hoge = Foo | Bar" declParser
-      `shouldBe`
-      Right (DataDecl "Hoge" [] [("Foo", TyCon "Hoge"), ("Bar", TyCon "Hoge")])
+    context "data constructor" $ do
 
-    it "with values" $
-      runAlex "data Hoge = Foo Int String" declParser
-      `shouldBe`
-      Right (DataDecl "Hoge" [] [("Foo", TyFun tyInt (TyFun tyString (TyCon "Hoge")))])
+      it "basic" $
+        fromDecl <$> parseDecl "data Hoge = Foo | Bar"
+        `shouldBe`
+        Right (DataDecl' "Hoge" [] [("Foo", TyCon "Hoge"), ("Bar", TyCon "Hoge")])
 
-    it "with type variables" $
-      runAlex "data Hoge a = Foo a" declParser
-      `shouldBe`
-      Right (DataDecl "Hoge" ["a"] [("Foo", TyFun (TyVar $ TV "a") (TyCon "Hoge"))])
--}
+      it "with values" $
+        fromDecl <$> parseDecl "data Hoge = Foo Int String" 
+        `shouldBe`
+        Right (DataDecl' "Hoge" [] [("Foo", TyFun tyInt (TyFun tyString (TyCon "Hoge")))])
+
+      it "with type variables" $
+        fromDecl <$> parseDecl "data Hoge a = Foo a" 
+        `shouldBe`
+        Right (DataDecl' "Hoge" ["a"] [("Foo", TyFun (TyVar $ TV "a") (TyCon "Hoge"))])
 
 data ExprSrc
   = Apply' ExprSrc ExprSrc

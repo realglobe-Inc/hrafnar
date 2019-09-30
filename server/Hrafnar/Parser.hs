@@ -107,14 +107,14 @@ varName = do
   x <- lowerChar
   xs <- many (alphaNumChar <|> char '_' <|> char '\'' )
   when (x : xs `elem` reservedWords) (failure Nothing SE.empty)
-  pure $ x : xs
+  lexeme . pure $ x : xs
 
 typeName :: Parser String
 typeName = do
   x <- upperChar
   xs <- many (alphaNumChar <|> char '_' <|> char '\'' )
   when (x : xs `elem` reservedWords) (failure Nothing SE.empty)
-  pure $ x : xs
+  lexeme . pure $ x : xs
   
 dataName :: Parser String
 dataName = typeName
@@ -173,7 +173,7 @@ literature = integer
 -- terms
 var :: Parser Expr
 var = do
-  name <- lexeme varName
+  name <- varName
   pos <- getSourcePos
   pure $ At (SrcPos pos) (Var name)
 
@@ -199,7 +199,7 @@ expr = trim $ ifExpr <|> letExpr <|> apply <|> term
 -- declarations
 exprDecl :: Parser Decl
 exprDecl = do
-  name <- lexeme varName
+  name <- varName
   _ <- symbol (-=)
   e <- expr
   pos <- getSourcePos
@@ -207,9 +207,9 @@ exprDecl = do
 
 typeAnno :: Parser Decl
 typeAnno = do
-  names <- lexeme varName `sepBy1` symbol comma
+  names <- varName `sepBy1` symbol comma
   _ <- symbol (-:)
-  typ <- lexeme typeName
+  typ <- typeName
   pos <- getSourcePos
   pure . At (SrcPos pos) $ TypeAnno names (TyCon typ)
   

@@ -58,7 +58,7 @@ spaces1 = some $ char ' '
 varName :: Parser String
 varName = do
   x <- lowerChar
-  xs <- some (alphaNumChar <|> char '_' <|> char '\'' )
+  xs <- many (alphaNumChar <|> char '_' <|> char '\'' )
   pure $ x : xs
 
 -- control expressions
@@ -102,7 +102,7 @@ var = do
 
 
 term :: Parser Expr
-term =  literature <|> var <|> lambda <|> parens expr
+term = literature <|> var <|> lambda <|> parens expr
 
 apply :: Parser Expr
 apply = do

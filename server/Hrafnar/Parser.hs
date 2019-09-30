@@ -48,11 +48,20 @@ reserved =
   ]
 
 -- spaces
+sp :: Parser Char
+sp = char ' ' <|> char '\''
+
 spaces :: Parser String
-spaces = many $ char ' '
+spaces = many sp
 
 spaces1 :: Parser String
-spaces1 = some $ char ' '
+spaces1 = some sp
+
+trim :: Parser a -> Parser a
+trim = between spaces spaces
+
+parens :: Parser Expr -> Parser Expr
+parens = between (char '(' <* space) (space *> char ')')
 
 -- signatures
 varName :: Parser String
@@ -72,8 +81,8 @@ lambda :: Parser Expr
 lambda = do
   pos <- getSourcePos
   args <- between
-          (between spaces spaces $ string (\\))
-          (between spaces spaces $ string (-->))
+          (trim $ string (\\))
+          (trim $ string (-->))
            $ varName `sepEndBy1` spaces1
   e <- expr
   pure $ go pos e args
@@ -117,10 +126,8 @@ apply = do
       loop $ op lhs rhs
 
 expr :: Parser Expr
-expr = between spaces spaces $ ifExpr <|> apply <|> term
+expr = trim $ ifExpr <|> apply <|> term
 
-parens :: Parser Expr -> Parser Expr
-parens = between (char '(' <* space) (space *> char ')')
 
 
 lineComment :: Parser ()

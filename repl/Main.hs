@@ -15,7 +15,7 @@ import           Control.Monad.State.Strict
 import qualified Data.List                  as L
 import qualified Data.Map.Strict            as MA
 import           System.Console.Haskeline
-import Text.Megaparsec
+import           Text.Megaparsec
 
 data Env = Env
   { valEnv  :: VEnv
@@ -59,7 +59,7 @@ interpretExpr e  = do
   outputStrLn . show . view _1 $ appEndo t (defaultSituation ^. #context, [])
 
 interpretDecl :: Decl -> Interpret
-interpretDecl (At _ (TypeAnno{})) = outputStrLn "unavailable to declare type only"
+interpretDecl (At _ TypeAnno{}) = outputStrLn "unavailable to declare type only"
 interpretDecl (At _ (ExprDecl n e)) = do
   env <- lift get
   sc <- lift $ infer (typeEnv env) (withDummy $ Let [withDummy $ ExprDecl n e] (withDummy $ Var n))

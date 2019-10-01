@@ -16,13 +16,13 @@ spec = do
   describe "expressions" $ do
 
     context "if" $ do
-      
+
       it "parse if" $
-        
+
         parseExpr "if x then y else z"
         `shouldBe`
         Right (If' (Var' "x") (Var' "y") (Var' "z"))
-        
+
       it "if has right assoc" $
         parseExpr "if x then y else f z"
         `shouldBe`
@@ -35,7 +35,7 @@ spec = do
 
 
     context "case" $ do
-    
+
       it "simple" $
         parseExpr
         ( "case x of\n" <>
@@ -44,28 +44,48 @@ spec = do
         `shouldBe`
         Right (Case' (Var' "x") [(PVar' "x", Lit' $ Int' 1)])
 
+      it "indented branch" $
+        parseExpr
+        ( "case x of\n" <>
+          "  x ->\n" <>
+          "    1"
+        )
+        `shouldBe`
+        Right (Case' (Var' "x") [(PVar' "x", Lit' $ Int' 1)])
+
+      it "wild card" $
+        parseExpr
+        ( "case x of\n" <>
+          "  1 -> 1\n" <>
+          "  _ -> 2"
+        )
+        `shouldBe`
+        Right (Case' (Var' "x")
+               [ (PLit' $ Int' 1, Lit' $ Int' 1)
+               , (PWildcard', Lit' $ Int' 2)
+               ])
+
+      it "data constructor" $
+        parseExpr
+        ( "case x of\n" <>
+          "  Foo -> 1\n" <>
+          "  Bar x -> 2"
+        )
+        `shouldBe`
+        Right (Case' (Var' "x")
+               [ (PCon' "Foo" [], Lit' (Int' 1))
+               , (PCon' "Bar" [PVar' "x"], Lit' (Int' 2))])
+
+      it "nested data constructor" $
+        parseExpr
+        ( "case x of\n" <>
+          "  Foo ( Bar (Baz x)) -> 1"
+        )
+        `shouldBe`
+        Right (Case' (Var' "x")
+               [ (PCon' "Foo" [PCon' "Bar" [PCon' "Baz" [PVar' "x"]]], Lit' (Int' 1)) ])
+
 {-
-    it "wild card" $
-      fromExpr <$> runAlex "case x of { 1 -> 1; _ -> 2 }" exprParser
-      `shouldBe`
-      Right (Case' (Var' "x")
-             [ (PLit' $ Int' 1, Lit' $ Int' 1)
-             , (PWildcard', Lit' $ Int' 2)
-             ])
-
-    it "data constructor" $
-      fromExpr <$> runAlex "case x of { Foo -> 1; Bar x -> 2 }" exprParser
-      `shouldBe`
-      Right (Case' (Var' "x")
-             [ (PCon' "Foo" [], Lit' (Int' 1))
-             , (PCon' "Bar" [PVar' "x"], Lit' (Int' 2))])
-
-    it "nested data constructor" $
-      fromExpr <$> runAlex "case x of { Foo (Bar (Baz x)) -> 1 }" exprParser
-      `shouldBe`
-      Right (Case' (Var' "x")
-             [ (PCon' "Foo" [PCon' "Bar" [PCon' "Baz" [PVar' "x"]]], Lit' (Int' 1)) ])
-
   describe "do" $
 
     it "parse do" $
@@ -147,7 +167,7 @@ spec = do
         Right
         (ExprDecl' "x" (Lit' $ Int' 1))
 
-      
+
     context "type annotation" $ do
 
       it "single" $
@@ -170,12 +190,12 @@ spec = do
         Right (DataDecl' "Hoge" [] [("Foo", TyCon "Hoge"), ("Bar", TyCon "Hoge")])
 
       it "with values" $
-        parseDecl "data Hoge = Foo Int String" 
+        parseDecl "data Hoge = Foo Int String"
         `shouldBe`
         Right (DataDecl' "Hoge" [] [("Foo", TyFun tyInt (TyFun tyString (TyCon "Hoge")))])
 
       it "with type variables" $
-        parseDecl "data Hoge a = Foo a" 
+        parseDecl "data Hoge a = Foo a"
         `shouldBe`
         Right (DataDecl' "Hoge" ["a"] [("Foo", TyFun (TyVar $ TV "a") (TyCon "Hoge"))])
 
@@ -244,6 +264,6 @@ fromExpr (At _ expr) = fromExpr' expr
 fromDecl :: Decl -> DeclSrc
 fromDecl (At _ decl) = fromDecl' decl
   where
-    fromDecl' (ExprDecl n expr) = ExprDecl' n $ fromExpr expr
+    fromDecl' (ExprDecl n expr)  = ExprDecl' n $ fromExpr expr
     fromDecl' (DataDecl n ns cs) = DataDecl' n ns cs
-    fromDecl' (TypeAnno ns typ) = TypeAnno' ns typ
+    fromDecl' (TypeAnno ns typ)  = TypeAnno' ns typ

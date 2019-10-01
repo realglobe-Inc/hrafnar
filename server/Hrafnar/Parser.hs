@@ -32,13 +32,15 @@ type Parser = Parsec Void String
 declsParser = undefined -- FIXME: temporary definition
 
 -- | Reserved words.
-if_, then_, else_, let_, in_, data_ :: String
+if_, then_, else_, let_, in_, data_, case_, of_ :: String
 if_ = "if"
 then_ = "then"
 else_ = "else"
 let_ = "let"
 in_ = "in"
 data_ = "data"
+case_ = "case"
+of_ = "of"
 
 -- | List of reserved words.
 reservedWords :: [String]
@@ -49,16 +51,19 @@ reservedWords =
   , let_
   , in_
   , data_
+  , case_
+  , of_
   ]
 
 -- | Reserved symbols.
-(-\), (-->), (-=), (-:), (-|), comma :: String
+(-\), (-->), (-=), (-:), (-|), comma, underscore :: String
 (-\) = "\\"
 (-->) = "->"
 (-=) = "="
 (-:) = ":"
 (-|) = "|"
 comma = ","
+underscore = "_"
 
 -- | List of reserved symbols.
 reservedSymbols :: [String]
@@ -69,6 +74,7 @@ reservedSymbols =
   , (-:)
   , (-|)
   , comma
+  , underscore
   ]
 
 -- misc
@@ -84,7 +90,7 @@ spaces1 = some sp
 trim :: Parser a -> Parser a
 trim = between spaces spaces
 
-parens :: Parser Expr -> Parser Expr
+parens :: Parser a -> Parser a
 parens = between (char '(' <* space) (space *> char ')')
 
 lineComment :: Parser ()
@@ -105,6 +111,10 @@ scn = Lx.space space1 lineComment empty
 sc :: Parser () -- sc means space copnsumer
 sc = Lx.space (void spaces1) lineComment blockComment
 
+data ConParam
+  = TypeName String
+  | VarName String
+
 -- signatures
 varName :: Parser String
 varName = do
@@ -119,15 +129,15 @@ typeName = do
   xs <- many (alphaNumChar <|> char '_' <|> char '\'' )
   when (x : xs `elem` reservedWords) (failure Nothing SE.empty)
   lexeme . pure $ x : xs
-  
+
 dataName :: Parser String
 dataName = typeName
 
 -- control expressions
 ifExpr :: Parser Expr
 ifExpr = do
-  pos <- getSourcePos
   e <- If <$> (symbol if_ *> expr) <*> (symbol then_ *> expr) <*> (symbol else_ *> expr)
+  pos <- getSourcePos
   pure $ At (SrcPos pos) e
 
 lambda :: Parser Expr
@@ -164,15 +174,59 @@ letExpr =
       At (SrcPos pos) <$> extractLet blockLetIn
 
 
--- literatures
-integer :: Parser Expr
-integer = do
-  num <- lexeme Lx.decimal
-  pos <- getSourcePos
-  pure $ At (SrcPos pos) (Lit $ Int num)
+caseExpr :: Parser Expr
+caseExpr = Lx.indentBlock scn parser
+  where
+    parser = do
+      pos <- getSourcePos
+      _ <- symbol case_
+      e <- lexeme expr
+      _ <- symbol of_
+      pure $ Lx.IndentSome Nothing
+        (pure . At (SrcPos pos) . Case e)
+        (try branch <|> indentedBranch)
 
-literature :: Parser Expr
-literature = integer
+    branch = do
+      varPos <- getSourcePos
+      p <- pat
+      _ <- symbol (-->)
+      e <- expr
+      pure (At (SrcPos varPos) p, e)
+
+    indentedBranch = do
+      varPos <- getSourcePos
+      (p, e:es) <- Lx.indentBlock scn (
+        do
+          p <- pat
+          Lx.IndentSome Nothing (\es -> pure (p, es)) expr <$ symbol (-->)
+        )
+      unless (L.null es) $ failure Nothing SE.empty
+      pure (At (SrcPos varPos) p, e)
+
+    pat = try (PVar <$> varName) <|>
+          try patternLiteral <|>
+          try conParser <|>
+          PWildcard <$ symbol underscore
+
+    conParser = do
+      pos <- getSourcePos
+      con <- typeName
+      params <- (At (SrcPos pos) <$> (lexeme (parens conParser) <|> PVar <$> varName)) `sepBy` sc
+      pure $ PCon con params
+
+-- literatures
+integer :: (Lit -> a) -> Parser a
+integer f = do
+  num <- lexeme Lx.decimal
+  pure (f $ Int num)
+
+literal :: Parser Expr
+literal = do
+  pos <- getSourcePos
+  At (SrcPos pos) <$> integer Lit
+
+patternLiteral :: Parser Pat'
+patternLiteral = integer PLit
 
 -- terms
 var :: Parser Expr
@@ -183,7 +237,7 @@ var = do
 
 
 term :: Parser Expr
-term = literature <|> var <|> lambda <|> parens expr
+term = literal <|> var <|> lambda <|> parens expr
 
 apply :: Parser Expr
 apply = do
@@ -198,7 +252,7 @@ apply = do
       loop $ op lhs rhs
 
 expr :: Parser Expr
-expr = trim $ ifExpr <|> letExpr <|> apply <|> term
+expr = trim $ ifExpr <|> letExpr <|> caseExpr <|> apply <|> term
 
 -- declarations
 exprDecl :: Parser Decl
@@ -217,17 +271,13 @@ typeAnno = do
   pos <- getSourcePos
   pure . At (SrcPos pos) $ TypeAnno names (TyCon typ)
 
-data ConParam
-  = TypeName String
-  | VarName String
-
 dataDecl :: Parser Decl
 dataDecl = do
   _ <- symbol data_
   tyName <- dataName
   tyVars <- varName `sepBy` sc
   _ <- symbol (-=)
-  let  p = do
+  let p = do
          conName <- typeName
          params <- (TypeName <$> typeName <|> VarName <$> varName) `sepBy` sc
          pure (conName, foldr (\case
@@ -238,7 +288,6 @@ dataDecl = do
   cons <- p `sepBy` symbol (-|)
   pos <- getSourcePos
   pure . At (SrcPos pos) $ DataDecl tyName tyVars cons
-  
 
 decl :: Parser Decl
 decl = try exprDecl <|> try typeAnno <|> dataDecl

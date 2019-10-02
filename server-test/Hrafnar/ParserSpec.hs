@@ -139,6 +139,19 @@ spec = do
                (Apply' (Var' "g") (Lit' $ Int' 1))
               )
 
+      it "apply an infix operator" $
+        parseExpr "1 * 2"
+        `shouldBe`
+        Right (Apply' (Apply' (Lit' (Int' 1)) (Var' "*")) (Lit' (Int' 2)))
+
+      it "apply infix operators" $
+        -- Association of operators is going to be resolved later stage.
+        -- All operators are regarded as which have same priority and
+        -- left associative, like (((1 * 2) + 3) / 4).
+        parseExpr "1 * 2 + 3 / 4"
+        `shouldBe`
+        Right (Apply' (Apply' (Apply' (Apply' (Apply' (Apply' (Lit' (Int' 1)) (Var' "*")) (Lit' (Int' 2))) (Var' "+")) (Lit' (Int' 3))) (Var' "/")) (Lit' (Int' 4)))
+
     context "lambda" $ do
 
       it "multi args lambda" $

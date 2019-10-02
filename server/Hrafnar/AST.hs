@@ -23,7 +23,6 @@ module Hrafnar.AST
   , extractTypes
   , extractData
   , binop
-  , assoc
   , mkApp
   , mkLambda
   , shrinkTypes
@@ -104,31 +103,23 @@ data Line
   deriving (Eq, Show)
 
 extractExprs :: [Decl] -> [(Name, Expr)]
-extractExprs []                = []
+extractExprs []                       = []
 extractExprs (At _ (ExprDecl n e):ds) = (n, e) : extractExprs ds
-extractExprs (_:ds)            = extractExprs ds
+extractExprs (_:ds)                   = extractExprs ds
 
 extractTypes :: [Decl] -> [(Name, Type)]
-extractTypes []                 = []
+extractTypes []                        = []
 extractTypes (At _ (TypeAnno ns t):ds) = fmap (, t) ns <> extractTypes ds
-extractTypes (_:ds)             = extractTypes ds
+extractTypes (_:ds)                    = extractTypes ds
 
 extractData :: [Decl] -> [DataDecl]
-extractData []                    = []
+extractData []                           = []
 extractData (At _ (DataDecl n as vs):ds) = (n, (as, vs)) : extractData ds
-extractData (_:ds)                = extractData ds
+extractData (_:ds)                       = extractData ds
 
 binop :: Expr -> ((String, Int, OpAssoc), Position) -> Expr -> Expr
 binop ex1 ((sy, _, _), opPos) ex2 = withDummy
   $ Apply (withDummy $ Apply (At opPos $ Var sy) ex1) ex2
-
-assoc :: Expr -> ((String, Int, OpAssoc), Position) -> Expr -> ((String, Int, OpAssoc), Position) -> Expr -> Expr
-assoc ex1 op1@((_, pr1, as1), _) ex2 op2@((_, pr2, as2), _) ex3
- | pr1 > pr2 = binop (binop ex1 op1 ex2) op2 ex3
- | pr1 < pr2 = binop ex1 op1 (binop ex2 op2 ex3)
- | as1 == OpL && as2 == OpL = binop (binop ex1 op1 ex2) op2 ex3
- | as1 == OpR && as2 == OpR = binop ex1 op1 (binop ex2 op2 ex3)
-assoc _ _ _ _ _ = undefined
 
 mkApp :: Expr -> [Expr] -> Expr
 mkApp = foldl mk

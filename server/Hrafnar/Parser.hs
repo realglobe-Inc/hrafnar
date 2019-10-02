@@ -19,6 +19,7 @@ import           Hrafnar.AST
 import           Hrafnar.Types
 
 import           Control.Monad
+import           Data.Char
 import           Data.Functor
 import qualified Data.List                  as L
 import qualified Data.Set                   as SE
@@ -133,6 +134,15 @@ typeName = do
 dataName :: Parser String
 dataName = typeName
 
+operator :: Parser String
+operator = do
+  op <- some
+    ( oneOf ("!#$%&*+./<=>?@\\^|-~" :: String) <|>
+      symbolChar
+    )
+  when (op `elem` reservedSymbols) (failure Nothing SE.empty)
+  lexeme $ pure op
+
 -- control expressions
 ifExpr :: Parser Expr
 ifExpr = do
@@ -231,13 +241,13 @@ patternLiteral = integer PLit
 -- terms
 var :: Parser Expr
 var = do
-  name <- varName
+  name <- varName <|> operator
   pos <- getSourcePos
   pure $ At (SrcPos pos) (Var name)
 
 
 term :: Parser Expr
-term = literal <|> var <|> lambda <|> parens expr
+term = literal <|> try var <|> lambda <|> parens expr
 
 apply :: Parser Expr
 apply = do
@@ -250,6 +260,7 @@ apply = do
       op <- lexeme $ pure (\e1 e2 -> At (SrcPos pos) (Apply e1 e2))
       rhs <- term
       loop $ op lhs rhs
+
 
 expr :: Parser Expr
 expr = trim $ ifExpr <|> letExpr <|> caseExpr <|> apply <|> term

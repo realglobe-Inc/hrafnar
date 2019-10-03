@@ -194,6 +194,27 @@ spec = do
         `shouldBe`
         Right (TypeAnno' ["foo", "bar", "baz"] tyString)
 
+      it "function type" $
+        parseDecl "foo : Int -> String -> Bool"
+        `shouldBe`
+        Right (TypeAnno' ["foo"] (TyFun (TyCon "Int") (TyFun (TyCon "String") (TyCon "Bool"))))
+
+      it "type variables" $
+        parseDecl "foo : a -> b"
+        `shouldBe`
+        Right (TypeAnno' ["foo"] (TyFun (TyVar $ TV "a") (TyVar $ TV "b")))
+
+      it "ADT" $
+        pendingWith "need to add type application"
+{-
+        parseDecl "foo : Maybe a"
+        `shouldBe`
+        Right (TypeAnno' ["foo"] (TyCon "Maybe"))
+-}
+      it "parens" $
+        parseDecl "foo : (String -> Bool) -> Int"
+        `shouldBe`
+        Right (TypeAnno' ["foo"] (TyFun (TyFun tyString tyBool) tyInt))
 
     context "data constructor" $ do
 
@@ -211,6 +232,20 @@ spec = do
         parseDecl "data Hoge a = Foo a"
         `shouldBe`
         Right (DataDecl' "Hoge" ["a"] [("Foo", TyFun (TyVar $ TV "a") (TyCon "Hoge"))])
+
+
+    describe "top-level declarations" $
+
+      it "simple declaration" $
+        parseTopLevel
+        ( "main : String\n" <>
+          "main = 1"
+        )
+        `shouldBe`
+        Right
+        [ TypeAnno' ["main"] (TyCon "String")
+        , ExprDecl' "main" (Lit' $ Int' 1)
+        ]
 
 data ExprSrc
   = Apply' ExprSrc ExprSrc
@@ -244,10 +279,13 @@ data LitSrc
   deriving (Show, Eq)
 
 parseExpr :: String -> Either (ParseErrorBundle String Void) ExprSrc
-parseExpr x = fromExpr <$> parse exprParser "ParserSpec" x
+parseExpr x = fromExpr <$> parse (exprParser <* eof) "ParserSpec" x
 
 parseDecl :: String -> Either (ParseErrorBundle String Void) DeclSrc
-parseDecl x = fromDecl <$> parse declParser "ParserSpec" x
+parseDecl x = fromDecl <$> parse (declParser <* eof) "ParserSpec" x
+
+parseTopLevel :: String -> Either (ParseErrorBundle String Void) [DeclSrc]
+parseTopLevel x = fmap fromDecl <$> parse topLevel "ParserSpec" x
 
 fromExpr :: Expr -> ExprSrc
 fromExpr (At _ expr) = fromExpr' expr

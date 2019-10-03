@@ -12,6 +12,7 @@ module Hrafnar.Parser
   , declParser
   , lineParser
   , declsParser
+  , topLevel
   ) where
 
 import           Hrafnar.Annotation
@@ -109,7 +110,7 @@ lexeme = Lx.lexeme sc
 scn :: Parser ()
 scn = Lx.space space1 lineComment empty
 
-sc :: Parser () -- sc means space copnsumer
+sc :: Parser () -- sc means space consumer
 sc = Lx.space (void spaces1) lineComment blockComment
 
 data ConParam
@@ -278,9 +279,12 @@ typeAnno :: Parser Decl
 typeAnno = do
   names <- varName `sepBy1` symbol comma
   _ <- symbol (-:)
-  typ <- typeName
+  types <- typeP
+  let typ = foldr1 TyFun types
   pos <- getSourcePos
-  pure . At (SrcPos pos) $ TypeAnno names (TyCon typ)
+  pure . At (SrcPos pos) $ TypeAnno names typ
+    where
+      typeP = (TyCon <$> typeName <|> TyVar . TV <$> varName <|> foldr1 TyFun <$> parens typeP) `sepBy1` symbol (-->) -- TODO: parse type application
 
 dataDecl :: Parser Decl
 dataDecl = do
@@ -303,6 +307,8 @@ dataDecl = do
 decl :: Parser Decl
 decl = try exprDecl <|> try typeAnno <|> dataDecl
 
+topLevel :: Parser [Decl]
+topLevel = some (Lx.nonIndented scn decl) <* eof
 
 exprParser :: Parser Expr
 exprParser = expr

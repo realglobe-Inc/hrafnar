@@ -145,7 +145,7 @@ spec = do
       s `shouldBe` Forall [] (TyFun tyInt $ TyCon "Hoge")
 
 
-  describe "case" $
+  describe "case" $ do
 
     context "normal cases" $ do
 
@@ -177,51 +177,92 @@ spec = do
 
       it "data constructor" $ do
         s <- infer MA.empty . hl $
-             "main = let data Hoge = Foo Int in " <>
-             "\\x -> case x of { Foo y -> y }"
+             "data Hoge = Foo Int\n" <>
+             "main =\n" <>
+             "  \\x ->\n" <>
+             "    case x of\n" <>
+             "      Foo y -> y"
         s `shouldBe` Forall [] (TyFun (TyCon "Hoge") tyInt)
 
       it "data constructor with same variable name" $ do
         s <- infer MA.empty . hl $
-             "main = let data Hoge = Foo Int in " <>
-             "\\x -> case x of { Foo x -> x }"
+             "data Hoge = Foo Int\n" <>
+             "main =\n" <>
+             "  \\x ->\n" <>
+             "    case x of\n" <>
+             "      Foo x -> x"
         s `shouldBe` Forall [] (TyFun (TyCon "Hoge") tyInt)
 
       it "data constructor with branches" $ do
         s <- infer MA.empty . hl $
-             "main = let data Hoge = Foo Int | Bar String in " <>
-             "\\x -> case x of { Foo y -> y" <> " Bar _ -> 2 }"
+             "data Hoge = Foo Int | Bar String\n" <>
+             "main =\n" <>
+             "  \\x ->\n" <>
+             "    case x of\n" <>
+             "      Foo y -> y\n" <>
+             "      Bar _ -> 2"
         s `shouldBe` Forall [] (TyFun (TyCon "Hoge") tyInt)
 
       it "complex data constructor" $ do
         s <- infer MA.empty . hl $
-             "main = let data Hoge = Foo Int String Int in " <>
-             "\\x -> case x of { Foo x _ 1 -> 1" <> " Foo x _ 3 -> x }"
+             "data Hoge = Foo Int String Int\n" <>
+             "main =\n" <>
+             "  \\x ->\n" <>
+             "    case x of\n" <>
+             "      Foo x _ 1 -> 1\n" <>
+             "      Foo x _ 3 -> x"
         s `shouldBe` Forall [] (TyFun (TyCon "Hoge") tyInt)
+
 
       it "nested data constructor" $ do
         s <- infer MA.empty . hl $
-             "main = let data Hoge = Foo Fuga" <> " data Fuga = Bar Int in " <>
-             "\\x -> case x of { Foo (Bar x) -> x }"
+             "data Hoge = Foo Fuga\n" <>
+             "data Fuga = Bar Int\n" <>
+             "main =\n" <>
+             "  \\x ->\n" <>
+             "    case x of\n" <>
+             "      Foo (Bar x) -> x"
         s `shouldBe` Forall [] (TyFun (TyCon "Hoge") tyInt)
 
-{-
 
-    describe "throw exception" $ do
+    context "throw exception" $ do
+      -- These tests allow "any exceptions" cause
+      -- not distinguish what exception thrown.
+      -- In order to solve it, need to define exception
+      -- in the inferer.
 
       it "different type branches" $
-        infer MA.empty (hl
-        ("main = let data Bool = True | False in case 1 of { x -> 1" <> " 2 -> True }"))
-        `shouldThrow` anyException
+        infer MA.empty
+        (hl
+          ( "data Bool = True | False\n" <>
+            "main =\n" <>
+            "  case 1 of\n" <>
+            "    x -> 1\n" <>
+            "    2 -> True"
+          )
+        )
+        `shouldThrow`
+        anyException
 
       it "duplicated variables" $
-        infer MA.empty
-        (hl ("main = let data Hoge = Foo Int Int in case 1 of { Foo x x -> x }"))
-        `shouldThrow` anyException
 
-    describe "polymorphism" $
+        infer MA.empty
+        (hl
+         ( "data Hoge = Foo Int Int\n" <>
+           "  case 1 of\n" <>
+           "    Foo x x -> x"
+         )
+        )
+        `shouldThrow`
+        anyException
+
+    context "polymorphism" $
+
       it "dependencies should be correctly separated" $ do
         s <- infer (MA.singleton "add" (Forall [] $ TyFun tyInt (TyFun tyInt tyInt))) $ hl
-            ("main = y" <> "id = \\x -> x" <> " x = id 0" <> "y = (id (\\z -> add x z)) 1" <> "")
+             ( "main = y\n" <>
+               "id = \\x -> x\n" <>
+               "x = id 0\n" <>
+               "y = (id (\\z -> add x z)) 1"
+             )
         s `shouldBe` Forall [] tyInt
--}

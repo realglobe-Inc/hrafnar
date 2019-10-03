@@ -223,7 +223,7 @@ caseExpr = Lx.indentBlock scn parser
     conParser = do
       pos <- getSourcePos
       con <- typeName
-      params <- (At (SrcPos pos) <$> (lexeme (parens conParser) <|> PVar <$> varName)) `sepBy` sc
+      params <- (At (SrcPos pos) <$> (lexeme (parens conParser) <|> pat)) `sepBy` sc
       pure $ PCon con params
 
 -- literatures

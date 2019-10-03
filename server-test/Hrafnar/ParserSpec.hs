@@ -97,7 +97,12 @@ spec = do
 -}
     context "let in" $ do
 
-      it "parse let in" $
+      it "inline" $
+        parseExpr "let x = 1 in x"
+        `shouldBe`
+        Right (Let' [ExprDecl' "x" (Lit' $ Int' 1)] (Var' "x"))
+      
+      it "indented" $
         parseExpr
         ( "let\n" <>
           "  x = 1\n" <>
@@ -165,6 +170,21 @@ spec = do
         `shouldBe`
         Right (Lambda' "x" (Lambda' "y" (Var' "x")))
 
+      it "indented" $
+        parseExpr
+        ( "\\x y ->\n" <>
+          "     x"
+        )
+        `shouldBe`
+        Right (Lambda' "x" (Lambda' "y" (Var' "x")))      
+
+      it "wrong indented" $
+        parseExpr
+        ( "\\x y ->\n" <>
+          "x"
+        )
+        `shouldSatisfy` isLeft
+        
 
   describe "declarations" $ do
 

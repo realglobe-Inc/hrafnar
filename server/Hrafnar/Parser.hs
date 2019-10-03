@@ -158,7 +158,8 @@ lambda = do
           (symbol (-\))
           (symbol (-->))
            $ varName `sepEndBy1` sc
-  e <- expr
+  let level = sourceColumn pos
+  e <- try expr <|> (eol *> Lx.indentGuard sc GT level *> expr)
   pure $ go pos e args
     where
       go _ e []     = e
@@ -264,7 +265,7 @@ apply = do
 
 
 expr :: Parser Expr
-expr = trim $ ifExpr <|> letExpr <|> caseExpr <|> apply <|> term
+expr = lexeme $ ifExpr <|> letExpr <|> caseExpr <|> apply <|> term
 
 -- declarations
 exprDecl :: Parser Decl

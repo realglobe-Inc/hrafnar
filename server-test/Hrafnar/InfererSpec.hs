@@ -150,7 +150,7 @@ spec = do
     context "normal cases" $ do
 
       it "num" $ do
-        s <- infer MA.empty. hl $
+        s <- infer MA.empty . hl $
           ( "main =\n" <>
             "  case 1 of\n" <>
             "    1 -> 1\n" <>
@@ -158,13 +158,21 @@ spec = do
         s `shouldBe` Forall [] tyInt
 
       it "variable" $ do
-        s <- infer MA.empty. hl $
-          ("main = case 1 of { x -> x" <> " 2 -> 2 }")
+        s <- infer MA.empty . hl $
+          ( "main =\n" <>
+            "  case 1 of\n" <>
+            "    x -> x\n" <>
+            "    2 -> 2"
+          )
         s `shouldBe` Forall [] tyInt
 
       it "variable2" $ do
-        s <- infer MA.empty. hl $
-          ("main = \\x -> case x of { 1 -> 2" <> " x -> x }")
+        s <- infer MA.empty . hl $
+          ( "main =\n" <>
+            "  \\x ->\n" <>
+            "    case x of\n" <>
+            "      1 -> 2\n" <>
+            "      x -> x")
         s `shouldBe` Forall [] (TyFun tyInt tyInt)
 
       it "data constructor" $ do

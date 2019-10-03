@@ -11,7 +11,6 @@ module Hrafnar.Parser
   ( exprParser
   , declParser
   , lineParser
-  , declsParser
   , topLevel
   ) where
 
@@ -20,7 +19,6 @@ import           Hrafnar.AST
 import           Hrafnar.Types
 
 import           Control.Monad
-import           Data.Char
 import           Data.Functor
 import qualified Data.List                  as L
 import qualified Data.Set                   as SE
@@ -31,7 +29,6 @@ import qualified Text.Megaparsec.Char.Lexer as Lx
 
 type Parser = Parsec Void String
 
-declsParser = undefined -- FIXME: temporary definition
 
 -- | Reserved words.
 if_, then_, else_, let_, in_, data_, case_, of_ :: String

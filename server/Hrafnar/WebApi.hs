@@ -41,7 +41,7 @@ import           Path.IO
 import           Servant                     hiding (Handler (..))
 import qualified Servant                     (Handler (..))
 import           System.FilePath.Posix       (dropTrailingPathSeparator)
-import Text.Megaparsec
+import           Text.Megaparsec
 
 import           Debug.Trace
 
@@ -162,9 +162,9 @@ postDirOrSource name paths body = do
           debug useLogger $ "make hl source " <> show path
           liftIO $ writeFile (toFilePath path) source
           flip catches [parserError, infererError] $ do
-            decls <- case parse declsParser (toFilePath $ filename path) source of
+            decls <- case parse topLevel (toFilePath $ filename path) source of
               Right ds -> pure ds
-              Left _ -> throwString "failed parsing"
+              Left _   -> throwString "failed parsing"
             _ <- infer MA.empty $ withDummy . Let decls . withDummy $ Var "main"
             pure $ #result @= Just (#parse @= True <: #typeCheck @= True <: #message @= Nothing <: nil) <: nil
         _ -> do

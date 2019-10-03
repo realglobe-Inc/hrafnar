@@ -242,7 +242,7 @@ patternLiteral = integer PLit
 -- terms
 var :: Parser Expr
 var = do
-  name <- varName <|> operator
+  name <- varName <|> operator <|> dataName
   pos <- getSourcePos
   pure $ At (SrcPos pos) (Var name)
 
@@ -269,10 +269,11 @@ expr = trim $ ifExpr <|> letExpr <|> caseExpr <|> apply <|> term
 -- declarations
 exprDecl :: Parser Decl
 exprDecl = do
+  pos <- getSourcePos
+  let level = sourceColumn pos
   name <- varName
   _ <- symbol (-=)
-  e <- expr
-  pos <- getSourcePos
+  e <- try expr <|> (eol *> Lx.indentGuard sc GT level *> expr)
   pure . At (SrcPos pos) $ ExprDecl name e
 
 typeAnno :: Parser Decl

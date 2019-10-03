@@ -123,40 +123,48 @@ spec = do
            "f = \\x -> if True then x else f x"
       s `shouldBe` Forall [] tyInt
 
-{-
 
   describe "ADT" $ do
 
     it "basic" $ do
-      s <- infer MA.empty $ hl "main = let data Bool = True | False in True"
+      s <- infer MA.empty . hl $
+        "main = True\n" <>
+        "data Bool = True | False"
       s `shouldBe` Forall [] tyBool
 
     it "with values" $ do
-      s <- infer MA.empty $ hl "main = let data Hoge = Foo Int in Foo 1"
+      s <- infer MA.empty . hl $
+        "main = Foo 1\n" <>
+        "data Hoge = Foo Int"
       s `shouldBe` Forall [] (TyCon "Hoge")
 
     it "partial application" $ do
-      s <- infer MA.empty $ hl "main = let data Hoge = Foo Int Int in Foo 1"
+      s <- infer MA.empty . hl $
+        "main = Foo 1\n" <>
+        "data Hoge = Foo Int Int"
       s `shouldBe` Forall [] (TyFun tyInt $ TyCon "Hoge")
 
 
-  describe "case" $ do
+  describe "case" $
 
-    describe "normal cases" $ do
+    context "normal cases" $ do
 
       it "num" $ do
-        s <- infer MA.empty $
-             hl ("main = case 1 of { 1 -> 1" <> " 2 -> 2 }")
+        s <- infer MA.empty. hl $
+          ( "main =\n" <>
+            "  case 1 of\n" <>
+            "    1 -> 1\n" <>
+            "    2 -> 2")
         s `shouldBe` Forall [] tyInt
 
       it "variable" $ do
-        s <- infer MA.empty $
-             hl ("main = case 1 of { x -> x" <> " 2 -> 2 }")
+        s <- infer MA.empty. hl $
+          ("main = case 1 of { x -> x" <> " 2 -> 2 }")
         s `shouldBe` Forall [] tyInt
 
       it "variable2" $ do
-        s <- infer MA.empty $
-             hl ("main = \\x -> case x of { 1 -> 2" <> " x -> x }")
+        s <- infer MA.empty. hl $
+          ("main = \\x -> case x of { 1 -> 2" <> " x -> x }")
         s `shouldBe` Forall [] (TyFun tyInt tyInt)
 
       it "data constructor" $ do
@@ -189,6 +197,7 @@ spec = do
              "\\x -> case x of { Foo (Bar x) -> x }"
         s `shouldBe` Forall [] (TyFun (TyCon "Hoge") tyInt)
 
+{-
 
     describe "throw exception" $ do
 

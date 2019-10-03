@@ -8,6 +8,7 @@ import           Hrafnar.Types
 
 import           Test.Hspec
 
+import           Data.Either
 import           Data.Void
 import           Text.Megaparsec
 
@@ -180,6 +181,20 @@ spec = do
         Right
         (ExprDecl' "x" (Lit' $ Int' 1))
 
+      it "indented" $
+        parseDecl
+        ( "x =\n" <>
+          "  1"
+        )
+        `shouldBe`
+        Right
+        (ExprDecl' "x" (Lit' $ Int' 1))
+
+      it "wrong indented" $
+        parseDecl
+        ( "x =\n" <>
+          "1"
+        ) `shouldSatisfy` isLeft
 
     context "type annotation" $ do
 

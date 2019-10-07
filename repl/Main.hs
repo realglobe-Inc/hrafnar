@@ -1,6 +1,12 @@
 module Main where
 
-import           Hrafnar.Recipe
+import           Hrafnar.Annotation
+import           Hrafnar.AST
+import           Hrafnar.Builtin
+import           Hrafnar.Core
+import           Hrafnar.Exception
+import           Hrafnar.Inferer
+import           Hrafnar.Parser
 
 import           Control.Lens               hiding (setting)
 
@@ -9,7 +15,7 @@ import           Control.Monad.State.Strict
 import qualified Data.List                  as L
 import qualified Data.Map.Strict            as MA
 import           System.Console.Haskeline
-
+import           Text.Megaparsec
 
 data Env = Env
   { valEnv  :: VEnv
@@ -30,7 +36,7 @@ setting = Settings { historyFile = Nothing
                    }
 interpret :: String -> Interpret
 interpret i =
-  case runAlex i lineParser of
+  case parse  lineParser "" i of
     Right r -> case r of
       ExprLine e ->
         catches (interpretExpr e)
@@ -41,7 +47,7 @@ interpret i =
         catches (interpretDecl d)
                [ Handler inferError
                ]
-    Left l  -> outputStrLn l
+    Left _  -> outputStrLn "something wrong"
 
 interpretExpr :: Expr -> Interpret
 interpretExpr e  = do
@@ -53,10 +59,10 @@ interpretExpr e  = do
   outputStrLn . show . view _1 $ appEndo t (defaultSituation ^. #context, [])
 
 interpretDecl :: Decl -> Interpret
-interpretDecl TypeAnno{} = outputStrLn "unavailable to declare type only"
-interpretDecl (ExprDecl n e) = do
+interpretDecl (At _ TypeAnno{}) = outputStrLn "unavailable to declare type only"
+interpretDecl (At _ (ExprDecl n e)) = do
   env <- lift get
-  sc <- lift $ infer (typeEnv env) (withDummy $ Let [ExprDecl n e] (withDummy $ Var n))
+  sc <- lift $ infer (typeEnv env) (withDummy $ Let [withDummy $ ExprDecl n e] (withDummy $ Var n))
   (v,_) <- lift $ evalRWST (compile e) defaultSituation (initialState & #venv .~ valEnv env)
   lift . modify $ \Env{..} ->
     Env (MA.insert n v valEnv) (MA.insert n sc typeEnv)

@@ -1,6 +1,6 @@
 {-|
-Description : AST of Recipe
-Module      : Hrafnar.Recipe.AST
+Description : AST of hrafnar-lang
+Module      : Hrafnar.AST
 Copyright   : REALGLOBE INC. (c) REALGLOBE 2018
 License     : BSD3
 
@@ -8,7 +8,7 @@ Maintainer  : REALGLOBE INC.
 -}
 {-# LANGUAGE DeriveGeneric #-}
 
-module Hrafnar.Recipe.AST
+module Hrafnar.AST
   ( OpAssoc(..)
   , Expr'(..)
   , Expr
@@ -16,23 +16,23 @@ module Hrafnar.Recipe.AST
   , Pat
   , Pat'(..)
   , DataDecl
-  , Decl(..)
+  , Decl'(..)
+  , Decl
   , Line(..)
   , extractExprs
   , extractTypes
   , extractData
   , binop
-  , assoc
   , mkApp
   , mkLambda
   , shrinkTypes
   ) where
 
-import           Hrafnar.Recipe.Annotation
-import           Hrafnar.Recipe.Assoc
-import           Hrafnar.Recipe.Types
+import           Hrafnar.Annotation
+import           Hrafnar.Assoc
+import           Hrafnar.Types
 
-import qualified Data.Aeson                as AE
+import qualified Data.Aeson         as AE
 import           GHC.Generics
 
 -- | Wrapper for value
@@ -88,11 +88,13 @@ data Pat'
 
 -- | Declaration.
 type DataDecl = (Name, ([Name], [(Name, Type)]))
-data Decl
+data Decl'
   = ExprDecl Name Expr
   | DataDecl Name [Name] [(Name, Type)]
   | TypeAnno [Name] Type
   deriving (Eq, Show)
+
+type Decl = Located Decl'
 
 -- | For REPL.
 data Line
@@ -101,31 +103,23 @@ data Line
   deriving (Eq, Show)
 
 extractExprs :: [Decl] -> [(Name, Expr)]
-extractExprs []                = []
-extractExprs (ExprDecl n e:ds) = (n, e) : extractExprs ds
-extractExprs (_:ds)            = extractExprs ds
+extractExprs []                       = []
+extractExprs (At _ (ExprDecl n e):ds) = (n, e) : extractExprs ds
+extractExprs (_:ds)                   = extractExprs ds
 
 extractTypes :: [Decl] -> [(Name, Type)]
-extractTypes []                 = []
-extractTypes (TypeAnno ns t:ds) = fmap (, t) ns <> extractTypes ds
-extractTypes (_:ds)             = extractTypes ds
+extractTypes []                        = []
+extractTypes (At _ (TypeAnno ns t):ds) = fmap (, t) ns <> extractTypes ds
+extractTypes (_:ds)                    = extractTypes ds
 
 extractData :: [Decl] -> [DataDecl]
-extractData []                    = []
-extractData (DataDecl n as vs:ds) = (n, (as, vs)) : extractData ds
-extractData (_:ds)                = extractData ds
+extractData []                           = []
+extractData (At _ (DataDecl n as vs):ds) = (n, (as, vs)) : extractData ds
+extractData (_:ds)                       = extractData ds
 
 binop :: Expr -> ((String, Int, OpAssoc), Position) -> Expr -> Expr
 binop ex1 ((sy, _, _), opPos) ex2 = withDummy
   $ Apply (withDummy $ Apply (At opPos $ Var sy) ex1) ex2
-
-assoc :: Expr -> ((String, Int, OpAssoc), Position) -> Expr -> ((String, Int, OpAssoc), Position) -> Expr -> Expr
-assoc ex1 op1@((_, pr1, as1), _) ex2 op2@((_, pr2, as2), _) ex3
- | pr1 > pr2 = binop (binop ex1 op1 ex2) op2 ex3
- | pr1 < pr2 = binop ex1 op1 (binop ex2 op2 ex3)
- | as1 == OpL && as2 == OpL = binop (binop ex1 op1 ex2) op2 ex3
- | as1 == OpR && as2 == OpR = binop ex1 op1 (binop ex2 op2 ex3)
-assoc _ _ _ _ _ = undefined
 
 mkApp :: Expr -> [Expr] -> Expr
 mkApp = foldl mk

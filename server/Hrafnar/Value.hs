@@ -1,24 +1,24 @@
 {-|
 Description : Definition of Value
-Module      : Hrafnar.Recipe.Value
+Module      : Hrafnar.Value
 Copyright   : REALGLOBE INC. (c) REALGLOBE 2018
 License     : BSD3
 
 Maintainer  : REALGLOBE INC.
 -}
 {-# LANGUAGE UndecidableInstances #-}
-module Hrafnar.Recipe.Value
+module Hrafnar.Value
   ( Value(..)
   , VPat (..)
   , Effect (..)
   ) where
 
 import           Hrafnar.DI
-import           Hrafnar.Recipe.Event
-import           Hrafnar.Recipe.Types
+import           Hrafnar.Event
+import           Hrafnar.Types
 
 import           Control.Applicative
-import           System.IO.Unsafe     (unsafePerformIO)
+import           System.IO.Unsafe    (unsafePerformIO)
 
 -- | Value after compiling @Exp@
 data Value

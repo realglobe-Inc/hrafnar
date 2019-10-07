@@ -1,26 +1,26 @@
 {-|
-Description : Built-ins for recipe.
-Module      : Hrafnar.Recipe.Builtin
+Description : Built-ins functions.
+Module      : Hrafnar.Builtin
 Copyright   : REALGLOBE INC. (c) REALGLOBE 2018
 License     : BSD3
 
 Maintainer  : REALGLOBE INC.
 -}
 
-module Hrafnar.Recipe.Builtin
+module Hrafnar.Builtin
   ( builtins
   , ops
   , operators
   )
 where
 
-import           Hrafnar.Recipe.Core
-import           Hrafnar.Recipe.Types
+import           Hrafnar.Core
+import           Hrafnar.Types
 
-import           Control.Lens         hiding (List)
-import qualified Data.Map.Strict      as MA
-import           GHC.IO.Handle        (hGetContents, hPutStr)
-import           System.Process       (CreateProcess (..), StdStream (..), createProcess, shell)
+import           Control.Lens    hiding (List)
+import qualified Data.Map.Strict as MA
+import           GHC.IO.Handle   (hGetContents, hPutStr)
+import           System.Process  (CreateProcess (..), StdStream (..), createProcess, shell)
 
 --import           Debug.Trace
 

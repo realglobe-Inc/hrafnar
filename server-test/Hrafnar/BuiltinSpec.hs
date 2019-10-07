@@ -1,12 +1,15 @@
-module Hrafnar.Recipe.BuiltinSpec(spec) where
+module Hrafnar.BuiltinSpec(spec) where
 
 import           Hrafnar
-import           Hrafnar.Recipe
+import           Hrafnar.Builtin
+import           Hrafnar.Core
+import           Hrafnar.Value
+
 import           Test.Hspec
 
-import           Control.Lens   hiding (Context, List)
+import           Control.Lens    hiding (Context, List)
 import           Control.Monad
-import qualified Data.Map       as MA
+import qualified Data.Map        as MA
 
 
 injectTest :: (UseDI => a) -> IO a

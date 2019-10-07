@@ -159,7 +159,7 @@ spec = around withTemp $ do
           obj [ "result" .= object
                 [ "parse" .= Bool False
                 , "typeCheck" .= Bool False
-                , "message" .= String "parseError: TkEof"
+                , "message" .= String "failed parsing"
                 ]
               ]
 

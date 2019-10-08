@@ -125,6 +125,7 @@ tests:
     dependencies:
     - hrafnar
     - hspec
+    - hspec-megaparsec
     - hspec-wai
     - smallcheck-series
     - case-insensitive

@@ -1,7 +1,16 @@
+{-|
+Description : Exceptions.
+Module      : Hrafnar.Exception
+Copyright   : REALGLOBE INC. (c) REALGLOBE 2018
+License     : BSD3
+
+Maintainer  : REALGLOBE INC.
+-}
 module Hrafnar.Exception
   ( EvalException(..)
   , InferenceException(..)
   , RecipeException(..)
+  , ParserException(..)
   , maxEvalLimit
   , evalWithLimitCheck
   , SomeException
@@ -10,7 +19,9 @@ module Hrafnar.Exception
 
 import           Control.Exception.Safe
 import           Data.List              (intercalate)
+import           Text.Megaparsec.Error
 
+-- | Exception for evaluator.
 data EvalException
   = UnableApplyingToValue
   | VariableNotDeclared String
@@ -23,6 +34,7 @@ data EvalException
 
 instance Exception EvalException
 
+-- | Exception for inferer.
 data InferenceException
   = TypeVariableNotFound String
   | TypeVariableExhausted
@@ -31,6 +43,18 @@ data InferenceException
   deriving (Show)
 
 instance Exception InferenceException
+
+-- | Exception for parser.
+data ParserException
+  = ReservedKeyWord
+  | ReservedSymbol
+  deriving(Show, Ord, Eq)
+
+instance Exception ParserException
+
+instance ShowErrorComponent ParserException where
+  showErrorComponent = show
+
 
 data RecipeException
   = forall a. Show a => TypeError String [a]

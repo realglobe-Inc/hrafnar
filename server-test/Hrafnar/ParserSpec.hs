@@ -3,6 +3,7 @@ module Hrafnar.ParserSpec(spec) where
 import           Hrafnar.Annotation
 import           Hrafnar.AST
 import           Hrafnar.Builtin
+import           Hrafnar.Exception
 import           Hrafnar.Parser
 import           Hrafnar.Types
 
@@ -10,7 +11,6 @@ import           Test.Hspec
 import           Test.Hspec.Megaparsec
 
 import           Data.Either
-import           Data.Void
 import           Text.Megaparsec
 
 spec :: Spec
@@ -185,6 +185,14 @@ spec = do
         `shouldFailWith` errFancy 8 (fancy $ ErrorIndentation GT (mkPos 1) (mkPos 1))
 
 
+    context "miscellaneous failures" $
+
+      it "reserved keyword" $
+        parseExpr "\\if then -> else"
+        `shouldFailWith`
+        errFancy 3 (fancy $ ErrorCustom ReservedKeyWord)
+
+
   describe "declarations" $ do
 
     context "expression" $ do
@@ -309,13 +317,13 @@ data LitSrc
   | Tuple' [ExprSrc]
   deriving (Show, Eq)
 
-parseExpr :: String -> Either (ParseErrorBundle String Void) ExprSrc
+parseExpr :: String -> Either (ParseErrorBundle String ParserException) ExprSrc
 parseExpr x = fromExpr <$> parse (exprParser <* eof) "ParserSpec" x
 
-parseDecl :: String -> Either (ParseErrorBundle String Void) DeclSrc
+parseDecl :: String -> Either (ParseErrorBundle String ParserException) DeclSrc
 parseDecl x = fromDecl <$> parse (declParser <* eof) "ParserSpec" x
 
-parseTopLevel :: String -> Either (ParseErrorBundle String Void) [DeclSrc]
+parseTopLevel :: String -> Either (ParseErrorBundle String ParserException) [DeclSrc]
 parseTopLevel x = fmap fromDecl <$> parse topLevel "ParserSpec" x
 
 fromExpr :: Expr -> ExprSrc

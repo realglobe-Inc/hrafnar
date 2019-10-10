@@ -295,13 +295,11 @@ inferPat ans0@(t0, cs0) pat = case pat of
 
 scanDecls :: MonadThrow m => [Decl] -> m ([(Name, (Expr, Maybe Type))], [DataDecl])
 scanDecls decls = do
-  let exprs = extractExprs decls
-      types = extractTypes decls
-      dats = extractData decls
+  let (exprs, types, dats) = splitDecls decls ([], [], [])
       dupExprs = filter ((>1) . length) $ L.group (fmap (view _1) exprs)
       dupTypes = filter ((>1) . length) $ L.group (fmap (view _1) types)
       dupData = filter ((>1) . length) $ L.group (fmap (view _1) dats)
-  unless (null dupExprs && null dupTypes&& null dupData) $ throwString "duplicated declaration"
+  unless (null dupExprs && null dupTypes && null dupData) $ throwString "duplicated declaration"
   unless (L.null $ fmap (^. _1) types L.\\ fmap (^. _1) exprs) $ throwString "lacking binding"
   pure (fmap (\(x, e) -> (x, (e, L.lookup x types))) exprs, dats)
 

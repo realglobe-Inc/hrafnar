@@ -84,6 +84,7 @@ interpretDecl (At _ (ExprDecl n e)) = do
   lift . modify $ \Env{..} ->
     Env (MA.insert n v valEnv) (MA.insert n sc typeEnv)
 
+
 -- | Errors for type infering.
 inferError :: InferenceException -> Interpret
 inferError = \case

@@ -22,10 +22,6 @@ module Hrafnar.AST
   , extractExprs
   , extractTypes
   , extractData
-  , binop
-  , mkApp
-  , mkLambda
-  , shrinkTypes
   ) where
 
 import           Hrafnar.Annotation
@@ -116,21 +112,3 @@ extractData :: [Decl] -> [DataDecl]
 extractData []                           = []
 extractData (At _ (DataDecl n as vs):ds) = (n, (as, vs)) : extractData ds
 extractData (_:ds)                       = extractData ds
-
-binop :: Expr -> ((String, Int, OpAssoc), Position) -> Expr -> Expr
-binop ex1 ((sy, _, _), opPos) ex2 = withDummy
-  $ Apply (withDummy $ Apply (At opPos $ Var sy) ex1) ex2
-
-mkApp :: Expr -> [Expr] -> Expr
-mkApp = foldl mk
-  where
-    mk f'@(At pos _) arg = At pos $ Apply f' arg
-
-mkLambda :: Expr -> [Expr] -> Expr
-mkLambda = foldr mk
-  where
-    mk (At pos (Var n)) abst = At pos $ Lambda n abst
-    mk _ _                   = undefined
-
-shrinkTypes :: Name -> [(Name, [Type])] -> [(Name, Type)]
-shrinkTypes n = fmap (\(n', ts) -> (n', foldr TyFun (TyCon n) ts))

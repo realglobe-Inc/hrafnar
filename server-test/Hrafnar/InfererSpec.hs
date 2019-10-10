@@ -37,7 +37,7 @@ spec = do
             ]
           )
         )
-      s `shouldBe` Forall [] (TyTuple [TyCon "Int",TyCon "Bool"])
+      s `shouldBe` Forall [] (TyTuple [TyCon "Int" [], TyCon "Bool" []])
 
     it "List" pending
 
@@ -136,13 +136,21 @@ spec = do
       s <- infer MA.empty . hl $
         "main = Foo 1\n" <>
         "data Hoge = Foo Int"
-      s `shouldBe` Forall [] (TyCon "Hoge")
+      s `shouldBe` Forall [] (TyCon "Hoge" [])
 
     it "partial application" $ do
       s <- infer MA.empty . hl $
         "main = Foo 1\n" <>
         "data Hoge = Foo Int Int"
-      s `shouldBe` Forall [] (TyFun tyInt $ TyCon "Hoge")
+      s `shouldBe` Forall [] (TyFun tyInt $ TyCon "Hoge" [])
+
+    it "with type variable" $ do
+      pending
+      s <- infer MA.empty . hl $
+           "data Maybe a = Just a | Nothing\n" <>
+           "main : Maybe Int\n" <>
+           "main = Just 1"
+      s `shouldBe` Forall [] (TyCon "Maybe" [tyInt])
 
 
   describe "case" $ do
@@ -182,7 +190,7 @@ spec = do
              "  \\x ->\n" <>
              "    case x of\n" <>
              "      Foo y -> y"
-        s `shouldBe` Forall [] (TyFun (TyCon "Hoge") tyInt)
+        s `shouldBe` Forall [] (TyFun (TyCon "Hoge" []) tyInt)
 
       it "data constructor with same variable name" $ do
         s <- infer MA.empty . hl $
@@ -191,7 +199,7 @@ spec = do
              "  \\x ->\n" <>
              "    case x of\n" <>
              "      Foo x -> x"
-        s `shouldBe` Forall [] (TyFun (TyCon "Hoge") tyInt)
+        s `shouldBe` Forall [] (TyFun (TyCon "Hoge" []) tyInt)
 
       it "data constructor with branches" $ do
         s <- infer MA.empty . hl $
@@ -201,7 +209,7 @@ spec = do
              "    case x of\n" <>
              "      Foo y -> y\n" <>
              "      Bar _ -> 2"
-        s `shouldBe` Forall [] (TyFun (TyCon "Hoge") tyInt)
+        s `shouldBe` Forall [] (TyFun (TyCon "Hoge" []) tyInt)
 
       it "complex data constructor" $ do
         s <- infer MA.empty . hl $
@@ -211,7 +219,7 @@ spec = do
              "    case x of\n" <>
              "      Foo x _ 1 -> 1\n" <>
              "      Foo x _ 3 -> x"
-        s `shouldBe` Forall [] (TyFun (TyCon "Hoge") tyInt)
+        s `shouldBe` Forall [] (TyFun (TyCon "Hoge" []) tyInt)
 
 
       it "nested data constructor" $ do
@@ -222,7 +230,7 @@ spec = do
              "  \\x ->\n" <>
              "    case x of\n" <>
              "      Foo (Bar x) -> x"
-        s `shouldBe` Forall [] (TyFun (TyCon "Hoge") tyInt)
+        s `shouldBe` Forall [] (TyFun (TyCon "Hoge" []) tyInt)
 
 
     context "throw exception" $ do

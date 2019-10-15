@@ -152,7 +152,6 @@ spec = do
       s `shouldBe` Forall [] (TyCon "Maybe" [tyInt])
 
     it "type variable without type annotation" $ do
-      pending
       s <- infer MA.empty . hl $
            "data Maybe a = Just a | Nothing\n" <>
            "main = Just 1"

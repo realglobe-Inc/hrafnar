@@ -56,13 +56,13 @@ instance Substitutable TV where
   free = SE.singleton
 
 instance Substitutable Type where
-  apply _ a@TyCon{}     = a
-  apply s t@(TyVar a)   = MA.findWithDefault t a s
-  apply s (TyFun t1 t2) = TyFun (apply s t1) (apply s t2)
-  apply s (TyTuple ts)  = TyTuple (apply s ts)
-  apply s (TyList t)    = TyList (apply s t)
+  apply s (TyCon name as) = TyCon name (apply s as)
+  apply s t@(TyVar a)     = MA.findWithDefault t a s
+  apply s (TyFun t1 t2)   = TyFun (apply s t1) (apply s t2)
+  apply s (TyTuple ts)    = TyTuple (apply s ts)
+  apply s (TyList t)      = TyList (apply s t)
 
-  free TyCon{}       = SE.empty
+  free (TyCon _ ts)  = free ts
   free (TyVar a)     = SE.singleton a
   free (TyFun t1 t2) = SE.union (free t1) (free t2)
   free (TyTuple ts)  = free ts
@@ -180,7 +180,7 @@ inferExpr = \case
     (t, c) <- scoped (MA.singleton x $ Forall [] tv) (inferExpr e)
     pure (TyFun tv t, c)
 
-  At pos (Apply e1 e2) -> do
+  At _ (Apply e1 e2) -> do
     (t1, c1) <- inferExpr e1
     (t2, c2) <- inferExpr e2
     tv <- fresh
@@ -316,7 +316,7 @@ normalize (Forall _ t) =
     normtype (TyFun a b) = liftA2 TyFun (normtype a) (normtype b)
     normtype (TyTuple as) =  TyTuple <$> mapM normtype as
     normtype (TyList _) = undefined -- TODO: not implement yet
-    normtype (TyCon name ts) = TyCon name <$> mapM normtype ts
+    normtype (TyCon name as) = TyCon name <$> mapM normtype as
     normtype (TyVar a) =
       case L.lookup a ts of
         Just x  -> pure . TyVar $ TV x
@@ -326,7 +326,7 @@ normalize (Forall _ t) =
 
     fv (TyVar a)    = [a]
     fv (TyFun a b)  = fv a <> fv b
-    fv (TyCon _ ts) = L.concatMap fv ts
+    fv (TyCon _ as) = L.concatMap fv as
     fv (TyTuple as) = L.concatMap fv as
     fv (TyList a)   = fv a
   in do
@@ -347,7 +347,7 @@ solve (EqConst t1 t2:cs) = do
   pure $ MA.union su2 su1
 
 solve (ImplConst t1 ms t2:cs) =
-  solve $ ExplConst t1 (generalize t2) : cs
+  solve $ ExplConst t1 (Forall (SE.toList ms) t2) : cs
 
 solve (ExplConst t s: cs) = do
   s' <- instantiate s
@@ -359,7 +359,7 @@ unify :: MonadThrow m => Type -> Type -> m Subst
 unify t1 t2 | t1 == t2 = pure MA.empty
 unify (TyVar v) t = bind v t
 unify t (TyVar v) = bind v t
-unify (TyCon n1 ts1) (TyCon n2 ts2) = unless (n1 == n2) (throwString "failed inification") >>  unifyMany ts1 ts2
+unify (TyCon n1 ts1) (TyCon n2 ts2) = unless (n1 == n2) (throwString "failed inification") >> unifyMany ts1 ts2
 unify (TyFun t1 t2) (TyFun t3 t4) = unifyMany [t1, t2] [t3, t4]
 unify t1 t2 = throwString $ "failed unification: " <> show t1 <> ", " <> show t2
 

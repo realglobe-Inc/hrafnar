@@ -16,6 +16,7 @@ module Hrafnar.Parser
 
 import           Hrafnar.Annotation
 import           Hrafnar.AST
+import           Hrafnar.Exception
 import           Hrafnar.Types
 
 import           Control.Monad
@@ -27,7 +28,7 @@ import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as Lx
 
-type Parser = Parsec Void String
+type Parser = Parsec ParserException String
 
 
 -- | Reserved words.
@@ -119,14 +120,13 @@ varName :: Parser String
 varName = do
   x <- lowerChar
   xs <- many (alphaNumChar <|> char '_' <|> char '\'' )
-  when (x : xs `elem` reservedWords) (failure Nothing SE.empty)
+  when (x : xs `elem` reservedWords) (fancyFailure . SE.singleton $ ErrorCustom ReservedKeyWord)
   lexeme . pure $ x : xs
 
 typeName :: Parser String
 typeName = do
   x <- upperChar
   xs <- many (alphaNumChar <|> char '_' <|> char '\'' )
-  when (x : xs `elem` reservedWords) (failure Nothing SE.empty)
   lexeme . pure $ x : xs
 
 dataName :: Parser String
@@ -138,7 +138,7 @@ operator = do
     ( oneOf ("!#$%&*+./<=>?@\\^|-~" :: String) <|>
       symbolChar
     )
-  when (op `elem` reservedSymbols) (failure Nothing SE.empty)
+  when (op `elem` reservedSymbols) (fancyFailure . SE.singleton $ ErrorCustom ReservedSymbol)
   lexeme $ pure op
 
 -- control expressions
@@ -326,3 +326,4 @@ declParser = decl
 
 lineParser :: Parser Line
 lineParser = try (ExprLine <$> expr) <|> DeclLine <$> decl
+

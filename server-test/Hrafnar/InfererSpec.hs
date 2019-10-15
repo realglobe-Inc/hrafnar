@@ -144,11 +144,17 @@ spec = do
         "data Hoge = Foo Int Int"
       s `shouldBe` Forall [] (TyFun tyInt $ TyCon "Hoge" [])
 
-    it "with type variable" $ do
-      pending
+    it "type variable with type annotation" $ do
       s <- infer MA.empty . hl $
            "data Maybe a = Just a | Nothing\n" <>
            "main : Maybe Int\n" <>
+           "main = Just 1"
+      s `shouldBe` Forall [] (TyCon "Maybe" [tyInt])
+
+    it "type variable without type annotation" $ do
+      pending
+      s <- infer MA.empty . hl $
+           "data Maybe a = Just a | Nothing\n" <>
            "main = Just 1"
       s `shouldBe` Forall [] (TyCon "Maybe" [tyInt])
 
@@ -264,7 +270,7 @@ spec = do
         `shouldThrow`
         anyException
 
-    context "polymorphism" $
+    context "polymorphism" $ do
 
       it "dependencies should be correctly separated" $ do
         s <- infer (MA.singleton "add" (Forall [] $ TyFun tyInt (TyFun tyInt tyInt))) $ hl
@@ -274,3 +280,11 @@ spec = do
                "y = (id (\\z -> add x z)) 1"
              )
         s `shouldBe` Forall [] tyInt
+
+      it "type annotation" $ do
+        s <- infer MA.empty $ hl
+             ( "main : Int -> Int\n" <>
+               "main = id\n" <>
+               "id = \\x -> x"
+             )
+        s `shouldBe` Forall [] (TyFun tyInt tyInt)

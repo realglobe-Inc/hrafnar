@@ -26,7 +26,6 @@ data Type
   = TyVar TV
   | TyCon Name [Type]
   | TyFun Type Type
-  | TyApp Name [Type]
   | TyTuple [Type]
   | TyList Type
   deriving (Show, Eq, Ord)

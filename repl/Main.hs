@@ -1,3 +1,11 @@
+{-|
+Description : hrafnar-lang repl
+Module      : Main
+Copyright   : REALGLOBE INC. (c) REALGLOBE 2018
+License     : BSD3
+
+Maintainer  : REALGLOBE INC.
+-}
 module Main where
 
 import           Hrafnar.Annotation
@@ -17,26 +25,31 @@ import qualified Data.Map.Strict            as MA
 import           System.Console.Haskeline
 import           Text.Megaparsec
 
+-- | Value and type nvironment in the repl.
 data Env = Env
   { valEnv  :: VEnv
   , typeEnv :: TEnv
   }
-
+-- | Input monad with Env.
 type Interpret = InputT (StateT Env IO) ()
 
+-- | For completion.
 search :: String -> [Completion]
 search str = simpleCompletion <$> filter (L.isPrefixOf str)
              [
              ]
 
+-- | Setting for repl.
 setting :: Settings (StateT Env IO)
 setting = Settings { historyFile = Nothing
                    , complete = completeWord Nothing " \t" $ pure . search
                    , autoAddHistory = True
                    }
+
+-- | Parse a line and interpret it.
 interpret :: String -> Interpret
 interpret i =
-  case parse  lineParser "" i of
+  case parse lineParser "<repl>" i of
     Right r -> case r of
       ExprLine e ->
         catches (interpretExpr e)
@@ -49,6 +62,7 @@ interpret i =
                ]
     Left _  -> outputStrLn "something wrong"
 
+-- | Evaluate an expression and show it.
 interpretExpr :: Expr -> Interpret
 interpretExpr e  = do
   env <- lift get
@@ -58,8 +72,11 @@ interpretExpr e  = do
   outputStrLn "Effect: "
   outputStrLn . show . view _1 $ appEndo t (defaultSituation ^. #context, [])
 
+-- | Interpret a declaration and add it to the environment.
 interpretDecl :: Decl -> Interpret
+
 interpretDecl (At _ TypeAnno{}) = outputStrLn "unavailable to declare type only"
+
 interpretDecl (At _ (ExprDecl n e)) = do
   env <- lift get
   sc <- lift $ infer (typeEnv env) (withDummy $ Let [withDummy $ ExprDecl n e] (withDummy $ Var n))
@@ -67,16 +84,20 @@ interpretDecl (At _ (ExprDecl n e)) = do
   lift . modify $ \Env{..} ->
     Env (MA.insert n v valEnv) (MA.insert n sc typeEnv)
 
+
+-- | Errors for type infering.
 inferError :: InferenceException -> Interpret
 inferError = \case
   TypeVariableNotFound v ->
     outputStrLn v
 
+-- | Errors for evaluation.
 evalError :: EvalException -> Interpret
 evalError = \case
   VariableNotDeclared v ->
     outputStrLn v
 
+-- | Loop interpreting.
 loop :: Interpret
 loop = handle (\Interrupt -> loop) $
   getInputLine "> " >>= \case
@@ -84,6 +105,7 @@ loop = handle (\Interrupt -> loop) $
     Just "" -> loop
     Just i -> interpret i >> loop
 
+-- | Start repl.
 main :: IO ()
 main =
    evalStateT

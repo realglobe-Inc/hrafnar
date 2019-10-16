@@ -19,9 +19,7 @@ module Hrafnar.AST
   , Decl'(..)
   , Decl
   , Line(..)
-  , extractExprs
-  , extractTypes
-  , extractData
+  , splitDecls
   ) where
 
 import           Hrafnar.Annotation
@@ -98,18 +96,8 @@ data Line
   | DeclLine Decl
   deriving (Eq, Show)
 
-extractExprs :: [Decl] -> [(Name, Expr)]
-extractExprs []                       = []
-extractExprs (At _ (ExprDecl n e):ds) = (n, e) : extractExprs ds
-extractExprs (_:ds)                   = extractExprs ds
-
-extractTypes :: [Decl] -> [(Name, Type)]
-extractTypes []                        = []
-extractTypes (At _ (TypeAnno ns t):ds) = fmap (, t) ns <> extractTypes ds
-extractTypes (_:ds)                    = extractTypes ds
-
-extractData :: [Decl] -> [DataDecl]
-extractData []                           = []
-extractData (At _ (DataDecl n as vs):ds) = (n, (as, vs)) : extractData ds
-extractData (_:ds)                       = extractData ds
-
+splitDecls :: [Decl] -> ([(Name, Expr)], [(Name, Type)], [DataDecl]) -> ([(Name, Expr)], [(Name, Type)], [DataDecl])
+splitDecls [] ds' = ds'
+splitDecls (At _ (ExprDecl name expr):decls) (exprs, typs, dats) = splitDecls decls ((name , expr) : exprs, typs, dats)
+splitDecls (At _ (TypeAnno names typ):decls) (exprs, typs, dats) = splitDecls decls (exprs, fmap (, typ) names <> typs, dats)
+splitDecls (At _ (DataDecl name tvs cons):decls) (exprs, typs, dats) = splitDecls decls (exprs, typs, (name, (tvs, cons)) : dats)

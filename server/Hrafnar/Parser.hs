@@ -278,12 +278,21 @@ typeAnno :: Parser Decl
 typeAnno = do
   names <- varName `sepBy1` symbol comma
   _ <- symbol (-:)
-  types <- typeP
+  types <- typesP
   let typ = foldr1 TyFun types
   pos <- getSourcePos
   pure . At (SrcPos pos) $ TypeAnno names typ
     where
-      typeP = (TyCon <$> typeName <|> TyVar . TV <$> varName <|> foldr1 TyFun <$> parens typeP) `sepBy1` symbol (-->) -- TODO: parse type application
+      typeP = TyCon <$> typeName <*>
+              ( TyCon <$> typeName <*> pure [] <|>
+                TyCon <$> typeName <*> parens typesP <|>
+                TyVar . TV <$> varName <|>
+                parens typeP
+              ) `sepBy` sc <|>
+              TyVar . TV <$> varName <|>
+              foldr1 TyFun <$> parens typesP
+
+      typesP = typeP `sepBy1` symbol (-->)
 
 dataDecl :: Parser Decl
 dataDecl = do
@@ -295,9 +304,9 @@ dataDecl = do
          conName <- typeName
          params <- (TypeName <$> typeName <|> VarName <$> varName) `sepBy` sc
          pure (conName, foldr (\case
-                                  TypeName x -> TyFun (TyCon x)
+                                  TypeName x -> TyFun (TyCon x [])
                                   VarName x -> TyFun (TyVar (TV x))
-                              ) (TyCon tyName) params
+                              ) (TyCon tyName $ fmap (TyVar . TV) tyVars) params
               )
   cons <- p `sepBy` symbol (-|)
   pos <- getSourcePos
@@ -316,4 +325,5 @@ declParser :: Parser Decl
 declParser = decl
 
 lineParser :: Parser Line
-lineParser = ExprLine <$> expr <|> DeclLine <$> decl
+lineParser = try (ExprLine <$> expr) <|> DeclLine <$> decl
+

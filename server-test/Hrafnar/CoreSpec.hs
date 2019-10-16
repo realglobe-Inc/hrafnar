@@ -53,8 +53,8 @@ spec = do
 
     it "partial applying 1" $ ev
       ( "f = add 0\n" <>
-         "g = eq 1\n" <>
-         "main = f 2"
+        "g = eq 1\n" <>
+        "main = f 2"
       )
       `shouldBe`
       VInt 2

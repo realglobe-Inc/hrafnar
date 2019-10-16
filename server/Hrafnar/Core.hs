@@ -235,10 +235,10 @@ evalExpr expr = compile expr >>= link
 -- | compile all decls and link main
 evalMain :: [Decl] -> Eval Value
 evalMain decls = do
-  values <- MA.fromList <$> traverse (\(n, e) -> compile e >>= pure . (n,)) (extractExprs decls)
+  let (exprs, _, dats) = splitDecls decls ([], [], [])
+  values <- MA.fromList <$> traverse (\(n, e) -> compile e >>= pure . (n,)) exprs
   vars <- gets $ view #venv
-  let dataDecls = extractData decls
-      dataEnv = MA.fromList . join $ fmap compileData dataDecls
+  let dataEnv = MA.fromList . join $ fmap compileData dats
   modify $ #venv .~ MA.unions [vars, values, dataEnv]
 
   case MA.lookup "main" values of

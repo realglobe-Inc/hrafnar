@@ -237,7 +237,7 @@ spec = do
       it "function type" $
         parseDecl "foo : Int -> String -> Bool"
         `shouldParse`
-        TypeAnno' ["foo"] (TyFun (TyCon "Int") (TyFun (TyCon "String") (TyCon "Bool")))
+        TypeAnno' ["foo"] (TyFun tyInt (TyFun tyString tyBool))
 
       it "type variables" $
         parseDecl "foo : a -> b"
@@ -245,12 +245,10 @@ spec = do
         TypeAnno' ["foo"] (TyFun (TyVar $ TV "a") (TyVar $ TV "b"))
 
       it "ADT" $
-        pendingWith "need to add type application"
-{-
-        parseDecl "foo : Maybe a"
+        parseDecl "foo : Hoge Int String a"
         `shouldParse`
-        TypeAnno' ["foo"] (TyCon "Maybe"))
--}
+        TypeAnno' ["foo"] (TyCon "Hoge" [tyInt, tyString, TyVar $ TV "a"])
+
       it "parens" $
         parseDecl "foo : (String -> Bool) -> Int"
         `shouldParse`
@@ -261,18 +259,28 @@ spec = do
       it "basic" $
         parseDecl "data Hoge = Foo | Bar"
         `shouldParse`
-        DataDecl' "Hoge" [] [("Foo", TyCon "Hoge"), ("Bar", TyCon "Hoge")]
+        DataDecl' "Hoge" [] [("Foo", TyCon "Hoge" []), ("Bar", TyCon "Hoge" [])]
 
-      it "with values" $
+      it "with types" $
         parseDecl "data Hoge = Foo Int String"
         `shouldParse`
-        DataDecl' "Hoge" [] [("Foo", TyFun tyInt (TyFun tyString (TyCon "Hoge")))]
+        DataDecl' "Hoge" [] [("Foo", TyFun tyInt (TyFun tyString (TyCon "Hoge" [])))]
 
       it "with type variables" $
         parseDecl "data Hoge a = Foo a"
         `shouldParse`
-        DataDecl' "Hoge" ["a"] [("Foo", TyFun (TyVar $ TV "a") (TyCon "Hoge"))]
+        DataDecl' "Hoge" ["a"] [("Foo", TyFun (TyVar $ TV "a") (TyCon "Hoge" [TyVar $ TV "a"]))]
 
+      it "type variables and types" $
+        parseDecl "data Hoge a b = Foo a Int b String"
+        `shouldParse`
+        DataDecl' "Hoge" ["a", "b"]
+        [("Foo", TyFun (TyVar $ TV "a") (TyFun tyInt (TyFun (TyVar $ TV "b") (TyFun tyString (TyCon "Hoge" [TyVar $ TV "a", TyVar $ TV "b"])))))]
+
+      it "phantom type" $
+        parseDecl "data Proxy a = Proxy"
+        `shouldParse`
+        DataDecl' "Proxy" ["a"] [("Proxy", TyCon "Proxy" [TyVar $ TV "a"])]
 
     describe "top-level declarations" $
 
@@ -282,7 +290,7 @@ spec = do
           "main = 1"
         )
         `shouldParse`
-        [ TypeAnno' ["main"] (TyCon "String")
+        [ TypeAnno' ["main"] tyString
         , ExprDecl' "main" (Lit' $ Int' 1)
         ]
 

@@ -100,7 +100,7 @@ executables:
     - hrafnar
     - optparse-applicative
 
-  hmli:
+  hli:
     main:                Main.hs
     source-dirs:         repl
     ghc-options:

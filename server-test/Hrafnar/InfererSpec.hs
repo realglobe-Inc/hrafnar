@@ -2,6 +2,7 @@ module Hrafnar.InfererSpec(spec) where
 
 import           Hrafnar.Annotation
 import           Hrafnar.AST
+import           Hrafnar.Exception
 import           Hrafnar.Inferer
 import           Hrafnar.Parser
 import           Hrafnar.Types
@@ -23,6 +24,33 @@ hl s =
 
 spec :: Spec
 spec = do
+
+  describe "basics" $ do
+
+    it "literal" $ do
+      s <- infer MA.empty $
+           hl "main = 1"
+      s `shouldBe` Forall [] tyInt
+
+    it "variable" $ do
+      s <- infer MA.empty $ hl
+           ( "main = x\n" <>
+             "x = 1"
+           )
+      s `shouldBe` Forall [] tyInt
+
+    it "variable" $
+      infer MA.empty
+      (hl
+        ( "main = y\n" <>
+          "x = 1"
+        )
+      )
+      `shouldThrow`
+      \case
+        UnboundVariable "y" _ -> True
+        _ -> False
+
 
   describe "collection types" $ do
 
@@ -68,7 +96,11 @@ spec = do
       infer MA.empty (hl
           ( "main : String\n" <>
             "main = 1"
-          )) `shouldThrow` anyException
+          ))
+      `shouldThrow`
+      \case
+        FailedUnification _ _ -> True
+        _ -> False
 
   describe "let" $ do
 
@@ -239,35 +271,67 @@ spec = do
 
 
     context "throw exception" $ do
-      -- These tests allow "any exceptions" cause
-      -- not distinguish what exception thrown.
-      -- In order to solve it, need to define exception
-      -- in the inferer.
 
       it "different type branches" $
         infer MA.empty
         (hl
-          ( "data Bool = True | False\n" <>
-            "main =\n" <>
-            "  case 1 of\n" <>
-            "    x -> 1\n" <>
-            "    2 -> True"
-          )
+         ( "data Bool = True | False\n" <>
+           "main =\n" <>
+           "  case 1 of\n" <>
+           "    x -> 1\n" <>
+           "    2 -> True"
+         )
         )
         `shouldThrow`
-        anyException
+        \case
+          FailedUnification _ _ -> True
+          _ -> False
+
 
       it "duplicated variables" $
 
         infer MA.empty
         (hl
          ( "data Hoge = Foo Int Int\n" <>
+           "main =\n" <>
            "  case 1 of\n" <>
            "    Foo x x -> x"
          )
         )
         `shouldThrow`
-        anyException
+        \case
+          DuplicatedPatternVariables _ _ -> True
+          _ -> False
+
+      it "not exist data constructor" $
+        infer MA.empty
+        (hl
+         ( "data Spam = Spam\n" <>
+           "main =\n" <>
+           "  case Spam of\n" <>
+           "    Voom -> 1"
+         )
+        )
+        `shouldThrow`
+        \case
+          DataConstructorNotFound "Voom" _ -> True
+          _ -> False
+
+      it "pass wrong arguments to data constructor" $
+        infer MA.empty
+        (hl
+         ( "data Hoge = Foo Int\n" <>
+           "data Bool = True | False\n" <>
+           "main = \n" <>
+           "  case Foo 1 of\n" <>
+           "    Foo True -> 1"
+         )
+        )
+        `shouldThrow`
+        \case
+          TypeUnmatched _ _ -> True
+          _ -> False
+
 
     context "polymorphism" $ do
 
@@ -287,3 +351,15 @@ spec = do
                "id = \\x -> x"
              )
         s `shouldBe` Forall [] (TyFun tyInt tyInt)
+
+      it "occurs check" $
+        infer MA.empty
+        (hl
+         ( "f = \\g x -> g g x\n" <>
+           "main = 1"
+         )
+        )
+        `shouldThrow`
+        \case
+          OccursCheckFailed _ _ -> True
+          _ -> False

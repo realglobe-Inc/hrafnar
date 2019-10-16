@@ -261,6 +261,7 @@ applyAnswer (TyFun t1 t2, csa) (tv@TyVar{}, csb) =
 applyAnswer (TyFun t1 t2, csa) (t3, csb)
   | t1 == t3 = pure (t2, csa <> csb)
   | otherwise = throw $ TypeUnmatched t1 t3
+-- never happen a following case because the parser repels expression like that
 applyAnswer (t1, _) (t2, _) = throw $ CantApplyToValue t1 t2
 
 inferPat :: Answer -> Pat -> Infer (Answer, [(Name, Scheme)])
@@ -299,6 +300,7 @@ scanDecls decls = do
       dupExprs = filter ((>1) . length) $ L.group (fmap (view _1) exprs)
       dupTypes = filter ((>1) . length) $ L.group (fmap (view _1) types)
       dupData = filter ((>1) . length) $ L.group (fmap (view _1) dats)
+  -- TODO: issue #44
   unless (null dupExprs && null dupTypes && null dupData) $ throwString "duplicated declaration"
   unless (L.null $ fmap (^. _1) types L.\\ fmap (^. _1) exprs) $ throwString "lacking binding"
   pure (fmap (\(x, e) -> (x, (e, L.lookup x types))) exprs, dats)

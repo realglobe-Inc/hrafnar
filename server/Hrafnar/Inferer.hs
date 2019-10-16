@@ -166,11 +166,11 @@ inferExpr = \case
 
   At _ (Lit (List _)) -> undefined -- TODO: not implement yet
 
-  At _ (Var x) -> do
+  At pos (Var x) -> do
     env <- ask
     case MA.lookup x env of
       Nothing ->
-        throwString "unbound variable"
+        throw $ UnboundVariable x pos
       Just s -> do
         t <- instantiate s
         pure (t, [])
@@ -235,15 +235,15 @@ inferCase expr bs = do
       (t', cs') <- inferExpr e
       pure (t', EqConst t0 t : cs <> cs')
 
-    At _ (PCon n ps) -> do
+    At pos (PCon n ps) -> do
       env <- ask
       dc <- instantiate =<<
             case  MA.lookup n env of
               Just x  -> pure x
-              Nothing -> throwString "data constructor not found"
+              Nothing -> throw $ DataConstructorNotFound n pos
       (anssPat, fvs) <- L.unzip <$> mapM (inferPat ans0) ps
       let dupFvs = L.filter ((>1) . L.length) . L.group . fmap (^. _1) $ mconcat fvs
-      unless (L.null dupFvs) $ throwString "duplicated pattern variables"
+      unless (L.null dupFvs) . throw $ DuplicatedPatternVariables n pos
       (t, cs) <- foldM applyAnswer (dc, []) anssPat
       -- FIXME: same variables are able to exist.
       (t', cs') <- scoped (MA.fromList $ mconcat fvs) $ inferExpr e
@@ -260,8 +260,8 @@ applyAnswer (TyFun t1 t2, csa) (tv@TyVar{}, csb) =
   pure (t2, EqConst tv t1 : csa <> csb)
 applyAnswer (TyFun t1 t2, csa) (t3, csb)
   | t1 == t3 = pure (t2, csa <> csb)
-  | otherwise = throwString "type unmatched"
-applyAnswer _ _ = throwString "can't apply to value"
+  | otherwise = throw $ TypeUnmatched t1 t3
+applyAnswer (t1, _) (t2, _) = throw $ CantApplyToValue t1 t2
 
 inferPat :: Answer -> Pat -> Infer (Answer, [(Name, Scheme)])
 inferPat ans0@(t0, cs0) pat = case pat of
@@ -274,15 +274,15 @@ inferPat ans0@(t0, cs0) pat = case pat of
     (t, cs) <- inferExpr $ withDummy (Lit l)
     pure ((t, cs <> cs0), [])
 
-  At _ (PCon n ps) -> do
+  At pos (PCon n ps) -> do
     env <- ask
     dc <- instantiate =<<
       case  MA.lookup n env of
         Just x  -> pure x
-        Nothing -> throwString "data constructor not found"
+        Nothing -> throw $ DataConstructorNotFound n pos
     (anssPat, fvs) <- L.unzip <$> mapM (inferPat ans0) ps
     let dupFvs = L.filter ((>1) . L.length) . L.group . fmap (^. _1) $ mconcat fvs
-    unless (L.null dupFvs) $ throwString "duplicated pattern variables"
+    unless (L.null dupFvs) $ throw $ DuplicatedPatternVariables n pos
     (t, cs) <- foldM applyAnswer (dc, []) anssPat
     pure ((t, cs), mconcat fvs)
 
@@ -320,7 +320,7 @@ normalize (Forall _ t) =
     normtype (TyVar a) =
       case L.lookup a ts of
         Just x  -> pure . TyVar $ TV x
-        Nothing -> throwString "type variable not found"
+        Nothing -> throw $ TypeVariableNotFound (unTV a)
 
     ts = L.zip (L.nub $ fv t) (show <$> [0..])
 
@@ -359,9 +359,9 @@ unify :: MonadThrow m => Type -> Type -> m Subst
 unify t1 t2 | t1 == t2 = pure MA.empty
 unify (TyVar v) t = bind v t
 unify t (TyVar v) = bind v t
-unify (TyCon n1 ts1) (TyCon n2 ts2) = unless (n1 == n2) (throwString "failed inification") >> unifyMany ts1 ts2
+unify t1@(TyCon n1 ts1) t2@(TyCon n2 ts2) = unless (n1 == n2) (throw $ FailedUnification t1 t2) >> unifyMany ts1 ts2
 unify (TyFun t1 t2) (TyFun t3 t4) = unifyMany [t1, t2] [t3, t4]
-unify t1 t2 = throwString $ "failed unification: " <> show t1 <> ", " <> show t2
+unify t1 t2 = throw $ FailedUnification t1 t2
 
 unifyMany :: MonadThrow m => [Type] -> [Type] -> m Subst
 unifyMany [] [] = pure MA.empty
@@ -369,11 +369,11 @@ unifyMany (t1 : ts1) (t2 : ts2) = do
   s1 <- unify t1 t2
   s2 <- unifyMany (fmap (apply s1) ts1) (fmap (apply s1) ts2)
   pure $ MA.union s1 s2
-unifyMany t1 t2 = throwString $ "unification mismatch: " <> show t1 <> " " <> show t2
+unifyMany ts1 ts2 = throw $ FailedUnifications ts1 ts2
 
 bind :: MonadThrow m => TV -> Type -> m Subst
 bind a t | t == TyVar a = pure MA.empty
-         | occurs a t = throwString $ "occurs check failed: " <> show a <> " " <> show t
+         | occurs a t = throw $ OccursCheckFailed (unTV a) t
          | otherwise = pure $ MA.singleton a t
 
 occurs :: TV -> Type -> Bool

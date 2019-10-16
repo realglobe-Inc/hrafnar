@@ -16,6 +16,8 @@ module Hrafnar.Exception
   , SomeException
   ) where
 
+import           Hrafnar.Annotation
+import           Hrafnar.Types
 
 import           Control.Exception.Safe
 import           Data.List              (intercalate)
@@ -26,7 +28,6 @@ data EvalException
   = UnableApplyingToValue
   | VariableNotDeclared String
   | OrphanFunction
-  | TypeUnmatched
   | EmptyAnonymousFunction
   | DifferentTypesInList
   | FailCompileLit
@@ -36,11 +37,19 @@ instance Exception EvalException
 
 -- | Exception for inferer.
 data InferenceException
-  = TypeVariableNotFound String
+  = TypeVariableNotFound Name
   | TypeVariableExhausted
   | InvalidConstraints
+  | UnboundVariable Name Position
+  | DataConstructorNotFound Name Position
+  | DuplicatedPatternVariables Name Position
+  | TypeUnmatched Type Type
+  | CantApplyToValue Type Type
+  | FailedUnification Type Type
+  | FailedUnifications [Type] [Type]
+  | OccursCheckFailed Name Type
   | EmptyDo
-  deriving (Show)
+  deriving (Show, Eq)
 
 instance Exception InferenceException
 

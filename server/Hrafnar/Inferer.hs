@@ -10,6 +10,7 @@ module Hrafnar.Inferer
   ( Scheme (..)
   , TEnv
   , infer
+  , dataDeclsToEnv
   ) where
 
 import           Hrafnar.Annotation

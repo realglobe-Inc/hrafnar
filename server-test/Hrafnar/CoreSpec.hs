@@ -28,26 +28,18 @@ ev s =
 spec :: Spec
 spec = do
 
-  describe "basic operations" $ do
-    it "compile Int"  $ do
-      let Right result = fst <$> evalRWST
-            (compile
-              (withDummy $ Lit (Int 1))
-            ) defaultSituation initialState
-      result `shouldBe` VInt 1
+  describe "basic operations" $
 
-    it "compile do" $ do
-      let Right result = fst <$> evalRWST
-            (compile
-              (withDummy $ Do
-                [ withDummy $ Lit (Bool True)
-                , withDummy $ Lit (Int 1)
-                , withDummy $ Lit (Int 0)
-                ]
-              )
-            ) defaultSituation initialState
-      result `shouldBe` VInt 0
+    context "if" $
 
+      it "normal" $ do
+        pending
+        ev
+          ( "data Bool = True | False\n" <>
+            "main = if True then 1 else 2"
+          )
+          `shouldBe`
+          VInt 1
 
   describe "complex operations" $ do
 

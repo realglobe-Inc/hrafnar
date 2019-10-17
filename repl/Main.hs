@@ -84,18 +84,25 @@ interpretDecl (At _ (ExprDecl n e)) = do
   lift . modify $ \Env{..} ->
     Env (MA.insert n v valEnv) (MA.insert n sc typeEnv)
 
+interpretDecl (At _ (DataDecl n ns cons)) = do
+  ts <- lift $ dataDeclsToEnv [(n, (ns, cons))]
+  let ds = MA.fromList $ compileData (n, (ns, cons))
+  lift . modify $ \Env{..} ->
+    Env (MA.union valEnv ds) (MA.union typeEnv ts)
 
 -- | Errors for type infering.
 inferError :: InferenceException -> Interpret
 inferError = \case
   TypeVariableNotFound v ->
     outputStrLn v
+  e ->
+    outputStrLn $ show e
 
 -- | Errors for evaluation.
 evalError :: EvalException -> Interpret
 evalError = \case
   VariableNotDeclared v ->
-    outputStrLn v
+    outputStrLn $ "variable not declare: " <> v
 
 -- | Loop interpreting.
 loop :: Interpret

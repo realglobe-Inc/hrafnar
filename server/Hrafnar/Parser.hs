@@ -240,7 +240,7 @@ patternLiteral = integer PLit
 -- terms
 var :: Parser Expr
 var = do
-  name <- varName <|> operator <|> dataName
+  name <- try varName <|> try operator <|> dataName
   pos <- getSourcePos
   pure $ At (SrcPos pos) (Var name)
 
@@ -325,5 +325,5 @@ declParser :: Parser Decl
 declParser = decl
 
 lineParser :: Parser Line
-lineParser = try (ExprLine <$> expr) <|> DeclLine <$> decl
+lineParser = try (ExprLine <$> expr) <|> DeclLine <$> decl <* many newline <* eof
 

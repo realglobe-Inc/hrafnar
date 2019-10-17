@@ -22,6 +22,7 @@ module Hrafnar.Core
   , Value(..)
   , VEnv
   , compile
+  , compileData
   , evalMain
   , evalExpr
   , link

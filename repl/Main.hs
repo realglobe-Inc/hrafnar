@@ -6,6 +6,7 @@ License     : BSD3
 
 Maintainer  : REALGLOBE INC.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 module Main where
 
 import           Hrafnar.Annotation
@@ -27,13 +28,24 @@ import           System.Console.Haskeline
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 
--- | Value and type nvironment in the repl.
+
+-- | Value and type environment in the repl.
 data Env = Env
-  { valEnv  :: VEnv
-  , typeEnv :: TEnv
+  { _valEnv  :: VEnv
+  , _typeEnv :: TEnv
   }
+
+makeLenses  ''Env
+
+-- | State of the repl
+newtype ReplState = ReplState
+  { _env   :: Env
+  }
+
+makeLenses  ''ReplState
+
 -- | Input monad with Env.
-type Interpret = InputT (StateT Env IO) ()
+type Interpret = InputT (StateT ReplState IO) ()
 
 -- | For REPL.
 data Line
@@ -49,6 +61,7 @@ data Command
   | ShowType
   deriving (Eq, Show)
 
+-- | Command parser.
 cmdParser :: Parser Command
 cmdParser = char ':' *>
             ( string "{" $> StartBlock <|>
@@ -56,24 +69,13 @@ cmdParser = char ':' *>
               string "t" $> ShowType
             )
 
+-- | Line Parser.
 lineParser :: Parser Line
 lineParser = try (ExprLine <$> exprParser) <|>
              try (DeclLine <$> declParser) <|>
              Command <$> cmdParser <*
              many newline <* eof
 
--- | For completion.
-search :: String -> [Completion]
-search str = simpleCompletion <$> filter (L.isPrefixOf str)
-             [
-             ]
-
--- | Setting for repl.
-setting :: Settings (StateT Env IO)
-setting = Settings { historyFile = Nothing
-                   , complete = completeWord Nothing " \t" $ pure . search
-                   , autoAddHistory = True
-                   }
 
 -- | Parse a line and interpret it.
 interpret :: String -> Interpret
@@ -96,9 +98,9 @@ interpret i =
 -- | Evaluate an expression and show it.
 interpretExpr :: Expr -> Interpret
 interpretExpr e  = do
-  env <- lift get
-  sc <- lift $  infer (typeEnv env) e
-  (v, t) <- lift $ evalRWST (evalExpr e) defaultSituation (initialState & #venv .~ valEnv env)
+  env <- lift $ use env
+  sc <- lift $ infer (env ^. typeEnv) e
+  (v, t) <- lift $ evalRWST (evalExpr e) defaultSituation (initialState & #venv .~ env ^. valEnv)
   outputStrLn $ "Value: " <> show v
   outputStrLn $ "Type: " <> show sc
   outputStrLn "Effect: "
@@ -110,17 +112,18 @@ interpretDecl :: Decl -> Interpret
 interpretDecl (At _ TypeAnno{}) = outputStrLn "unavailable to declare type only"
 
 interpretDecl (At _ (ExprDecl n e)) = do
-  env <- lift get
-  sc <- lift $ infer (typeEnv env) (withDummy $ Let [withDummy $ ExprDecl n e] (withDummy $ Var n))
-  (v,_) <- lift $ evalRWST (compile e) defaultSituation (initialState & #venv .~ valEnv env)
-  lift . modify $ \Env{..} ->
-    Env (MA.insert n v valEnv) (MA.insert n sc typeEnv)
+  en <- lift $ use env
+  sc <- lift $ infer (en ^. typeEnv) (withDummy $ Let [withDummy $ ExprDecl n e] (withDummy $ Var n))
+  (v,_) <- lift $ evalRWST (compile e) defaultSituation (initialState & #venv .~ en ^. valEnv)
+  lift $ env.valEnv .= MA.insert n v (en ^. valEnv)
+  lift $ env.typeEnv .= MA.insert n sc (en ^. typeEnv)
 
 interpretDecl (At _ (DataDecl n ns cons)) = do
+  en <- lift $ use env
   ts <- lift $ dataDeclsToEnv [(n, (ns, cons))]
   let ds = MA.fromList $ compileData (n, (ns, cons))
-  lift . modify $ \Env{..} ->
-    Env (MA.union valEnv ds) (MA.union typeEnv ts)
+  lift $ env.valEnv .= MA.union ds (en ^. valEnv)
+  lift $ env.typeEnv .= MA.union ts (en ^. typeEnv)
 
 -- | Errors for type infering.
 inferError :: InferenceException -> Interpret
@@ -144,9 +147,22 @@ loop = handle (\Interrupt -> loop) $
     Just "" -> loop
     Just i -> interpret i >> loop
 
+-- | For completion.
+search :: String -> [Completion]
+search str = simpleCompletion <$> filter (L.isPrefixOf str)
+             [
+             ]
+
+-- | Setting for repl.
+setting :: Settings (StateT ReplState IO)
+setting = Settings { historyFile = Nothing
+                   , complete = completeWord Nothing " \t" $ pure . search
+                   , autoAddHistory = True
+                   }
+
 -- | Start repl.
 main :: IO ()
 main =
    evalStateT
    (runInputT setting (withInterrupt loop)) $
-   Env (fmap (view _1) builtins) (view _2 <$> builtins)
+   ReplState (Env (fmap (view _1) builtins) (view _2 <$> builtins))

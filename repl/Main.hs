@@ -24,6 +24,7 @@ import qualified Data.List                  as L
 import qualified Data.Map.Strict            as MA
 import           System.Console.Haskeline
 import           Text.Megaparsec
+import           Text.Megaparsec.Char
 
 -- | Value and type nvironment in the repl.
 data Env = Env
@@ -32,6 +33,17 @@ data Env = Env
   }
 -- | Input monad with Env.
 type Interpret = InputT (StateT Env IO) ()
+
+-- | For REPL.
+data Line
+  = ExprLine Expr
+  | DeclLine Decl
+  deriving (Eq, Show)
+
+lineParser :: Parser Line
+lineParser = try (ExprLine <$> exprParser) <|>
+             DeclLine <$> declParser <*
+             many newline <* eof
 
 -- | For completion.
 search :: String -> [Completion]
@@ -101,7 +113,7 @@ inferError = \case
 -- | Errors for evaluation.
 evalError :: EvalException -> Interpret
 evalError = \case
-  VariableNotDeclared v ->
+  VariableNotDeclared v->
     outputStrLn $ "variable not declare: " <> v
 
 -- | Loop interpreting.

@@ -10,8 +10,8 @@ Maintainer  : REALGLOBE INC.
 module Hrafnar.Parser
   ( exprParser
   , declParser
-  , lineParser
   , topLevel
+  , Parser
   ) where
 
 import           Hrafnar.Annotation
@@ -354,6 +354,4 @@ exprParser = expr
 declParser :: Parser Decl
 declParser = decl
 
-lineParser :: Parser Line
-lineParser = try (ExprLine <$> expr) <|> DeclLine <$> decl <* many newline <* eof
 

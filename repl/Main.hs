@@ -78,9 +78,10 @@ interpret i =
 interpretExpr :: Expr -> Interpret
 interpretExpr e  = do
   env <- lift get
-  _ <- lift $  infer (typeEnv env) e
+  sc <- lift $  infer (typeEnv env) e
   (v, t) <- lift $ evalRWST (evalExpr e) defaultSituation (initialState & #venv .~ valEnv env)
   outputStrLn $ "Value: " <> show v
+  outputStrLn $ "Type: " <> show sc
   outputStrLn "Effect: "
   outputStrLn . show . view _1 $ appEndo t (defaultSituation ^. #context, [])
 

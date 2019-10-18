@@ -20,6 +20,7 @@ import           Control.Lens               hiding (setting)
 
 import           Control.Monad.RWS
 import           Control.Monad.State.Strict
+import           Data.Functor
 import qualified Data.List                  as L
 import qualified Data.Map.Strict            as MA
 import           System.Console.Haskeline
@@ -38,11 +39,27 @@ type Interpret = InputT (StateT Env IO) ()
 data Line
   = ExprLine Expr
   | DeclLine Decl
+  | Command Command
   deriving (Eq, Show)
+
+-- | Commands.
+data Command
+  = StartBlock
+  | EndBlock
+  | ShowType
+  deriving (Eq, Show)
+
+cmdParser :: Parser Command
+cmdParser = char ':' *>
+            ( string "{" $> StartBlock <|>
+              string "}" $> EndBlock <|>
+              string "t" $> ShowType
+            )
 
 lineParser :: Parser Line
 lineParser = try (ExprLine <$> exprParser) <|>
-             DeclLine <$> declParser <*
+             try (DeclLine <$> declParser) <|>
+             Command <$> cmdParser <*
              many newline <* eof
 
 -- | For completion.
@@ -72,7 +89,9 @@ interpret i =
         catches (interpretDecl d)
                [ Handler inferError
                ]
-    Left _  -> outputStrLn "something wrong"
+      Command c ->
+        outputStrLn $ show c
+    Left e  -> outputStrLn $ show e
 
 -- | Evaluate an expression and show it.
 interpretExpr :: Expr -> Interpret

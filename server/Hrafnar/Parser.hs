@@ -10,8 +10,8 @@ Maintainer  : REALGLOBE INC.
 module Hrafnar.Parser
   ( exprParser
   , declParser
-  , lineParser
   , topLevel
+  , Parser
   ) where
 
 import           Hrafnar.Annotation
@@ -22,6 +22,7 @@ import           Hrafnar.Types
 import           Control.Monad
 import           Data.Functor
 import qualified Data.List                  as L
+import           Data.Maybe
 import qualified Data.Set                   as SE
 import           Data.Void
 import           Text.Megaparsec
@@ -106,7 +107,7 @@ lexeme :: Parser a -> Parser a
 lexeme = Lx.lexeme sc
 
 scn :: Parser ()
-scn = Lx.space space1 lineComment empty
+scn = Lx.space space1 lineComment blockComment
 
 sc :: Parser () -- sc means space consumer
 sc = Lx.space (void spaces1) lineComment blockComment
@@ -116,6 +117,7 @@ data ConParam
   | VarName String
 
 -- signatures
+-- | Variable names start on lower character.
 varName :: Parser String
 varName = do
   x <- lowerChar
@@ -123,15 +125,19 @@ varName = do
   when (x : xs `elem` reservedWords) (fancyFailure . SE.singleton $ ErrorCustom ReservedKeyWord)
   lexeme . pure $ x : xs
 
+-- | Type name starts on upper character.
 typeName :: Parser String
 typeName = do
   x <- upperChar
   xs <- many (alphaNumChar <|> char '_' <|> char '\'' )
   lexeme . pure $ x : xs
 
+-- | Synonym of typeName.
 dataName :: Parser String
 dataName = typeName
 
+-- | Definition of operators.
+--   NOTE: when use '?', want to force to return Maybe value.
 operator :: Parser String
 operator = do
   op <- some
@@ -142,12 +148,21 @@ operator = do
   lexeme $ pure op
 
 -- control expressions
+-- | "if" expression.
 ifExpr :: Parser Expr
 ifExpr = do
-  e <- If <$> (symbol if_ *> expr) <*> (symbol then_ *> expr) <*> (symbol else_ *> expr)
   pos <- getSourcePos
+  e <- If <$> (symbol if_ *> expr) <*> (symbol then_ *> expr) <*> (symbol else_ *> expr)
   pure $ At (SrcPos pos) e
 
+-- | Lambda expression. it allows to write two followings.
+--   a) f = \x -> x + x
+--   b) f = \x ->
+--            x + x
+--  NOTE: Want to allow following expression, but can't solve now.
+--        Pay attention to indent level is less than lambda.
+--   c) f = \x ->
+--        x + x
 lambda :: Parser Expr
 lambda = do
   pos <- getSourcePos
@@ -162,6 +177,9 @@ lambda = do
       go _ e []     = e
       go p e (a:as) = At (SrcPos p) $ Lambda a $ go p e as
 
+-- | "let ~ in ~" expression. Available with indent.
+--   TODO: Use indent level like lambda expression.
+--         This implementation is little bit comlecated.
 letExpr :: Parser Expr
 letExpr =
   let
@@ -182,7 +200,7 @@ letExpr =
       try (At (SrcPos pos) <$> (Let <$> blockLetIn <*> expr)) <|>
       At (SrcPos pos) <$> extractLet blockLetIn
 
-
+-- | "case" expression. Its branches allow to indent.
 caseExpr :: Parser Expr
 caseExpr = Lx.indentBlock scn parser
   where
@@ -238,16 +256,20 @@ patternLiteral :: Parser Pat'
 patternLiteral = integer PLit
 
 -- terms
+-- | Variables include data constructors and operators.
 var :: Parser Expr
 var = do
-  name <- varName <|> operator <|> dataName
+  name <- try varName <|> try operator <|> dataName
   pos <- getSourcePos
   pure $ At (SrcPos pos) (Var name)
 
 
+-- | Term.
 term :: Parser Expr
 term = literal <|> try var <|> lambda <|> parens expr
 
+-- | Application a term to another term.
+--   This syntax has "Left recursion".
 apply :: Parser Expr
 apply = do
   t <- term
@@ -260,11 +282,16 @@ apply = do
       rhs <- term
       loop $ op lhs rhs
 
-
+-- | Expression.
 expr :: Parser Expr
 expr = lexeme $ ifExpr <|> letExpr <|> caseExpr <|> apply <|> term
 
 -- declarations
+-- | Declaration of expression like following.
+--     x = 1 + 2
+--   This syntax allows indented block.
+--     x =
+--       1 + 2
 exprDecl :: Parser Decl
 exprDecl = do
   pos <- getSourcePos
@@ -274,6 +301,8 @@ exprDecl = do
   e <- try expr <|> (eol *> Lx.indentGuard sc GT level *> expr)
   pure . At (SrcPos pos) $ ExprDecl name e
 
+-- | Type anotation like following.
+--     f : Either String a -> Int -> Maybe a
 typeAnno :: Parser Decl
 typeAnno = do
   names <- varName `sepBy1` symbol comma
@@ -294,6 +323,8 @@ typeAnno = do
 
       typesP = typeP `sepBy1` symbol (-->)
 
+-- | Declaration of data constructor.
+--     data Maybe a = Just a | Nothing
 dataDecl :: Parser Decl
 dataDecl = do
   _ <- symbol data_
@@ -316,7 +347,7 @@ decl :: Parser Decl
 decl = try exprDecl <|> try typeAnno <|> dataDecl
 
 topLevel :: Parser [Decl]
-topLevel = some (Lx.nonIndented scn decl) <* eof
+topLevel = catMaybes <$> some (try (Just <$> decl) <|> try (Just <$> decl <* newline) <|> newline $> Nothing)
 
 exprParser :: Parser Expr
 exprParser = expr
@@ -324,6 +355,4 @@ exprParser = expr
 declParser :: Parser Decl
 declParser = decl
 
-lineParser :: Parser Line
-lineParser = try (ExprLine <$> expr) <|> DeclLine <$> decl
 

@@ -282,11 +282,33 @@ spec = do
         `shouldParse`
         DataDecl' "Proxy" ["a"] [("Proxy", TyCon "Proxy" [TyVar $ TV "a"])]
 
-    describe "top-level declarations" $
+
+    describe "top-level declarations" $ do
 
       it "simple declaration" $
         parseTopLevel
         ( "main : String\n" <>
+          "main = 1"
+        )
+        `shouldParse`
+        [ TypeAnno' ["main"] tyString
+        , ExprDecl' "main" (Lit' $ Int' 1)
+        ]
+
+      it "newline at the end" $
+        parseTopLevel
+        ( "main : String\n" <>
+          "main = 1\n\n"
+        )
+        `shouldParse`
+        [ TypeAnno' ["main"] tyString
+        , ExprDecl' "main" (Lit' $ Int' 1)
+        ]
+
+      it "newline between declarations" $
+        parseTopLevel
+        ( "main : String\n" <>
+          "\n" <>
           "main = 1"
         )
         `shouldParse`

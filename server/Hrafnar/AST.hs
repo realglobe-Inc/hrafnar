@@ -18,7 +18,6 @@ module Hrafnar.AST
   , DataDecl
   , Decl'(..)
   , Decl
-  , Line(..)
   , splitDecls
   ) where
 
@@ -90,12 +89,7 @@ data Decl'
 
 type Decl = Located Decl'
 
--- | For REPL.
-data Line
-  = ExprLine Expr
-  | DeclLine Decl
-  deriving (Eq, Show)
-
+-- FIXME: issue #44
 splitDecls :: [Decl] -> ([(Name, Expr)], [(Name, Type)], [DataDecl]) -> ([(Name, Expr)], [(Name, Type)], [DataDecl])
 splitDecls [] ds' = ds'
 splitDecls (At _ (ExprDecl name expr):decls) (exprs, typs, dats) = splitDecls decls ((name , expr) : exprs, typs, dats)

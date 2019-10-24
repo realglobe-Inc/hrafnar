@@ -10,6 +10,7 @@ module Hrafnar.Inferer
   ( Scheme (..)
   , TEnv
   , infer
+  , scanDecls
   , dataDeclsToEnv
   ) where
 

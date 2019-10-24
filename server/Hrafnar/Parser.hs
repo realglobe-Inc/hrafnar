@@ -22,6 +22,7 @@ import           Hrafnar.Types
 import           Control.Monad
 import           Data.Functor
 import qualified Data.List                  as L
+import           Data.Maybe
 import qualified Data.Set                   as SE
 import           Data.Void
 import           Text.Megaparsec
@@ -106,7 +107,7 @@ lexeme :: Parser a -> Parser a
 lexeme = Lx.lexeme sc
 
 scn :: Parser ()
-scn = Lx.space space1 lineComment empty
+scn = Lx.space space1 lineComment blockComment
 
 sc :: Parser () -- sc means space consumer
 sc = Lx.space (void spaces1) lineComment blockComment
@@ -346,7 +347,7 @@ decl :: Parser Decl
 decl = try exprDecl <|> try typeAnno <|> dataDecl
 
 topLevel :: Parser [Decl]
-topLevel = some (Lx.nonIndented scn decl) <* eof
+topLevel = catMaybes <$> some (try (Just <$> decl) <|> try (Just <$> decl <* newline) <|> newline $> Nothing)
 
 exprParser :: Parser Expr
 exprParser = expr

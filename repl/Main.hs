@@ -21,6 +21,7 @@ import           Control.Lens               hiding (setting)
 
 import           Control.Monad.RWS
 import           Control.Monad.State.Strict
+import           Control.Monad.Writer.Lazy
 import           Data.Functor
 import qualified Data.List                  as L
 import qualified Data.Map.Strict            as MA
@@ -46,6 +47,9 @@ makeLenses  ''ReplState
 
 -- | Input monad with Env.
 type Interpret = InputT (StateT ReplState IO) ()
+
+-- | Block input.
+type BlockInput = InputT (WriterT String IO) ()
 
 -- | For REPL.
 data Line
@@ -91,9 +95,30 @@ interpret i =
         catches (interpretDecl d)
                [ Handler inferError
                ]
+      Command StartBlock -> do
+        block <- liftIO . execWriterT $ runInputT blockSetting (withInterrupt blockLoop)
+        catches (interpretBlock block)
+               [
+               ]
       Command c ->
         outputStrLn $ show c
     Left e  -> outputStrLn $ show e
+
+-- | Loop of block input
+blockLoop :: BlockInput
+blockLoop = getInputLine "| " >>= \case
+    Nothing -> pure ()
+    Just "" -> blockLoop
+    Just i -> case parse (Left . Command <$> cmdParser <|> Right <$> getInput) "<repl>" i of
+      Right (Right str) ->
+        lift (tell $ str <> "\n") >> blockLoop
+      Right (Left (Command EndBlock)) ->
+        pure ()
+      Right (Left (Command cmd)) ->
+        outputStrLn (show cmd) >> blockLoop
+      Left e ->
+        error $ show e
+
 
 -- | Evaluate an expression and show it.
 interpretExpr :: Expr -> Interpret
@@ -124,6 +149,21 @@ interpretDecl (At _ (DataDecl n ns cons)) = do
   let ds = MA.fromList $ compileData (n, (ns, cons))
   lift $ env.valEnv .= MA.union ds (en ^. valEnv)
   lift $ env.typeEnv .= MA.union ts (en ^. typeEnv)
+
+-- | Interpret a block of statements.
+interpretBlock :: String -> Interpret
+interpretBlock src =
+  case parse topLevel "<repl>" src of
+    Right decls -> do
+      (binds, dataDecls) <- lift $ scanDecls decls
+      en <- lift $ use env
+      ts <- lift $ dataDeclsToEnv dataDecls
+      let ds = MA.unions $ fmap (MA.fromList . compileData) dataDecls
+      lift $ env.valEnv .= MA.union ds (en ^. valEnv)
+      lift $ env.typeEnv .= MA.union ts (en ^. typeEnv)
+
+    Left e ->
+      outputStrLn $ show e
 
 -- | Errors for type infering.
 inferError :: InferenceException -> Interpret
@@ -156,6 +196,13 @@ search str = simpleCompletion <$> filter (L.isPrefixOf str)
 -- | Setting for repl.
 setting :: Settings (StateT ReplState IO)
 setting = Settings { historyFile = Nothing
+                   , complete = completeWord Nothing " \t" $ pure . search
+                   , autoAddHistory = True
+                   }
+
+-- | Setting for code block.
+blockSetting :: Settings (WriterT String IO)
+blockSetting = Settings { historyFile = Nothing
                    , complete = completeWord Nothing " \t" $ pure . search
                    , autoAddHistory = True
                    }

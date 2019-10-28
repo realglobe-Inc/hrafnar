@@ -37,7 +37,7 @@ data Env = Env
   { _valEnv   :: VEnv
   , _typeEnv  :: TEnv
   , _freshVar :: Int
-  }
+  } deriving (Show)
 
 makeLenses  ''Env
 
@@ -66,6 +66,7 @@ data Command
   = StartBlock
   | EndBlock
   | ShowType
+  | ShowEnv
   deriving (Eq, Show)
 
 -- | Command parser.
@@ -73,20 +74,22 @@ cmdParser :: Parser Command
 cmdParser = char ':' *>
             ( string "{" $> StartBlock <|>
               string "}" $> EndBlock <|>
-              string "t" $> ShowType
+              string "t" $> ShowType <|>
+              string "e" $> ShowEnv
             )
 
 -- | Line Parser.
 lineParser :: Parser Line
-lineParser = try (ExprLine <$> exprParser) <|>
-             try (DeclLine <$> declParser) <|>
-             Command <$> cmdParser <*
-             many newline <* eof
+lineParser = try (DeclLine <$> declParser <* eof) <|>
+             try (ExprLine <$> exprParser <* eof) <|>
+             Command <$> cmdParser <* eof
+
 
 
 -- | Parse a line and interpret it.
 interpret :: String -> Interpret ()
-interpret i =
+interpret i = do
+  liftIO $ parseTest lineParser i
   case parse lineParser "<repl>" i of
     Right r -> case r of
       ExprLine e ->
@@ -101,8 +104,11 @@ interpret i =
       Command StartBlock -> do
         block <- liftIO . execWriterT $ runInputT blockSetting (withInterrupt blockLoop)
         catches (interpretBlock block)
-               [
+               [ Handler inferError
+               , Handler evalError
                ]
+      Command ShowEnv ->
+        lift (use env) >>= outputStrLn . show
       Command c ->
         outputStrLn $ show c
     Left e  -> outputStrLn $ show e

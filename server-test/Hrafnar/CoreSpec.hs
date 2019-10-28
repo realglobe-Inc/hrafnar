@@ -176,6 +176,17 @@ spec = do
       `shouldBe`
       VInt 3
 
+    it "with Lambda" $ ev
+      ( "data Hoge = Foo | Bar\n" <>
+        "f =\n" <>
+        "  \\x ->\n" <>
+        "    case x of\n" <>
+        "      Foo -> 0\n" <>
+        "      Bar -> 1\n" <>
+        "main = f Foo"
+      )
+      `shouldBe`
+      VInt 0
 
   describe "evalMain" $
 

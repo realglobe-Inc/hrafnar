@@ -285,36 +285,124 @@ spec = do
 
     describe "top-level declarations" $ do
 
-      it "simple declaration" $
-        parseTopLevel
-        ( "main : String\n" <>
-          "main = 1"
-        )
-        `shouldParse`
-        [ TypeAnno' ["main"] tyString
-        , ExprDecl' "main" (Lit' $ Int' 1)
-        ]
+      context "basic" $ do
 
-      it "newline at the end" $
-        parseTopLevel
-        ( "main : String\n" <>
-          "main = 1\n\n"
-        )
-        `shouldParse`
-        [ TypeAnno' ["main"] tyString
-        , ExprDecl' "main" (Lit' $ Int' 1)
-        ]
+        it "simple declaration" $
+          parseTopLevel
+          ( "main : String\n" <>
+            "main = 1"
+          )
+          `shouldParse`
+          [ TypeAnno' ["main"] tyString
+          , ExprDecl' "main" (Lit' $ Int' 1)
+          ]
 
-      it "newline between declarations" $
-        parseTopLevel
-        ( "main : String\n" <>
-          "\n" <>
-          "main = 1"
-        )
-        `shouldParse`
-        [ TypeAnno' ["main"] tyString
-        , ExprDecl' "main" (Lit' $ Int' 1)
-        ]
+        it "newline at the end" $
+          parseTopLevel
+          ( "main : String\n" <>
+            "main = 1\n\n"
+          )
+          `shouldParse`
+          [ TypeAnno' ["main"] tyString
+          , ExprDecl' "main" (Lit' $ Int' 1)
+          ]
+
+        it "newline between declarations" $
+          parseTopLevel
+          ( "main : String\n" <>
+            "\n" <>
+            "main = 1"
+          )
+          `shouldParse`
+          [ TypeAnno' ["main"] tyString
+          , ExprDecl' "main" (Lit' $ Int' 1)
+          ]
+
+        it "multiple" $
+          parseTopLevel
+          ( "f = 1\n" <>
+            "g = f\n"
+          )
+          `shouldParse`
+          [ ExprDecl' "f" (Lit' $ Int' 1)
+          , ExprDecl' "g" (Var' "f")
+          ]
+
+        it "indented" $
+          parseTopLevel
+          ( "f =\n" <>
+            "  1\n" <>
+            "g = f\n"
+          )
+          `shouldParse`
+          [ ExprDecl' "f" (Lit' $ Int' 1)
+          , ExprDecl' "g" (Var' "f")
+          ]
+
+      context "lambda" $
+
+        it "indented" $
+          parseTopLevel
+          ( "f =\n" <>
+            "  \\x ->\n" <>
+            "    1\n" <>
+            "g = f\n"
+          )
+          `shouldParse`
+          [ ExprDecl' "f" (Lambda' "x" (Lit' $ Int' 1))
+          , ExprDecl' "g" (Var' "f")
+          ]
+
+
+      context "case" $ do
+
+        it "before declaration" $
+          parseTopLevel
+          ( "f =\n" <>
+            "  case Foo of\n" <>
+            "    Fuga -> 1\n" <>
+            "g = f\n"
+          )
+          `shouldParse`
+          [ ExprDecl' "f" (Case' (Var' "Foo") [(PCon' "Fuga" [], Lit' $ Int' 1)])
+          , ExprDecl' "g" (Var' "f")
+          ]
+
+        it "after data declaration" $
+          parseTopLevel
+          ( "data Hoge = Foo | Bar\n" <>
+            "f =\n" <>
+            "  case Foo of\n" <>
+            "    Foo -> 1\n" <>
+            "g = f\n"
+          )
+          `shouldParse`
+          [ DataDecl' "Hoge" [] [("Foo", TyCon "Hoge" []), ("Bar", TyCon "Hoge" [])]
+          , ExprDecl' "f" (Case' (Var' "Foo") [(PCon' "Foo" [], Lit' $ Int' 1)])
+          , ExprDecl' "g" (Var' "f")
+          ]
+
+        it "in lambda" $
+          parseTopLevel
+          ( "data Hoge = Foo | Bar\n" <>
+            "f =\n" <>
+            "  \\x ->\n" <>
+            "    case x of\n" <>
+            "      Foo -> 0\n" <>
+            "      Bar -> 1\n" <>
+            "main = f Foo"
+          )
+          `shouldParse`
+          [ DataDecl' "Hoge" [] [("Foo", TyCon "Hoge" []), ("Bar", TyCon "Hoge" [])]
+          , ExprDecl' "f" (Lambda' "x"
+                           (Case' (Var' "x")
+                            [ (PCon' "Foo" [], Lit' (Int' 0))
+                            , (PCon' "Bar" [], Lit' (Int' 1))
+                            ]
+                           )
+                          )
+          , ExprDecl' "main" (Apply' (Var' "f") (Var' "Foo"))
+          ]
 
 data ExprSrc
   = Apply' ExprSrc ExprSrc

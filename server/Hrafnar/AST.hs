@@ -26,6 +26,7 @@ import           Hrafnar.Assoc
 import           Hrafnar.Types
 
 import qualified Data.Aeson         as AE
+import qualified Data.List          as L
 import           GHC.Generics
 
 -- | Wrapper for value
@@ -65,7 +66,7 @@ instance Show Expr' where
   show (Lit x)      = "(Lit " <> show x <> ")"
   show (If x y z)   = "(If " <> show x <> " then " <> show y <> " else " <> show z <>")"
   show (Let ds e)   = "(Let " <> show ds <> " in " <> show e <> ")"
-  show Case{}       = "case"
+  show (Case e bs)  = "(Case " <> show e <> " [" <> L.intercalate ", " (fmap show bs) <> "]"
   show (Do xs)      = "(Do" <> show xs <> ")"
 
 -- | Patterns.

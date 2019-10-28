@@ -16,6 +16,7 @@ import           Hrafnar.Core
 import           Hrafnar.Exception
 import           Hrafnar.Inferer
 import           Hrafnar.Parser
+import           Hrafnar.Types
 
 import           Control.Lens               hiding (setting)
 
@@ -23,17 +24,19 @@ import           Control.Monad.RWS
 import           Control.Monad.State.Strict
 import           Control.Monad.Writer.Lazy
 import           Data.Functor
+import qualified Data.Graph                 as GR
 import qualified Data.List                  as L
 import qualified Data.Map.Strict            as MA
+import qualified Data.Set                   as SE
 import           System.Console.Haskeline
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 
-
 -- | Value and type environment in the repl.
 data Env = Env
-  { _valEnv  :: VEnv
-  , _typeEnv :: TEnv
+  { _valEnv   :: VEnv
+  , _typeEnv  :: TEnv
+  , _freshVar :: Int
   }
 
 makeLenses  ''Env
@@ -46,10 +49,10 @@ newtype ReplState = ReplState
 makeLenses  ''ReplState
 
 -- | Input monad with Env.
-type Interpret = InputT (StateT ReplState IO) ()
+type Interpret a = InputT (StateT ReplState IO) a
 
 -- | Block input.
-type BlockInput = InputT (WriterT String IO) ()
+type BlockInput a = InputT (WriterT String IO) a
 
 -- | For REPL.
 data Line
@@ -82,7 +85,7 @@ lineParser = try (ExprLine <$> exprParser) <|>
 
 
 -- | Parse a line and interpret it.
-interpret :: String -> Interpret
+interpret :: String -> Interpret ()
 interpret i =
   case parse lineParser "<repl>" i of
     Right r -> case r of
@@ -105,7 +108,7 @@ interpret i =
     Left e  -> outputStrLn $ show e
 
 -- | Loop of block input
-blockLoop :: BlockInput
+blockLoop :: BlockInput ()
 blockLoop = getInputLine "| " >>= \case
     Nothing -> pure ()
     Just "" -> blockLoop
@@ -121,7 +124,7 @@ blockLoop = getInputLine "| " >>= \case
 
 
 -- | Evaluate an expression and show it.
-interpretExpr :: Expr -> Interpret
+interpretExpr :: Expr -> Interpret ()
 interpretExpr e  = do
   env <- lift $ use env
   sc <- lift $ infer (env ^. typeEnv) e
@@ -132,7 +135,7 @@ interpretExpr e  = do
   outputStrLn . show . view _1 $ appEndo t (defaultSituation ^. #context, [])
 
 -- | Interpret a declaration and add it to the environment.
-interpretDecl :: Decl -> Interpret
+interpretDecl :: Decl -> Interpret ()
 
 interpretDecl (At _ TypeAnno{}) = outputStrLn "unavailable to declare type only"
 
@@ -151,22 +154,62 @@ interpretDecl (At _ (DataDecl n ns cons)) = do
   lift $ env.typeEnv .= MA.union ts (en ^. typeEnv)
 
 -- | Interpret a block of statements.
-interpretBlock :: String -> Interpret
-interpretBlock src =
+interpretBlock :: String -> Interpret ()
+interpretBlock src = do
+  liftIO $ parseTest topLevel src
   case parse topLevel "<repl>" src of
     Right decls -> do
       (binds, dataDecls) <- lift $ scanDecls decls
+
+      -- declare data constructors
       en <- lift $ use env
-      ts <- lift $ dataDeclsToEnv dataDecls
+      dts <- lift $ dataDeclsToEnv dataDecls
       let ds = MA.unions $ fmap (MA.fromList . compileData) dataDecls
       lift $ env.valEnv .= MA.union ds (en ^. valEnv)
-      lift $ env.typeEnv .= MA.union ts (en ^. typeEnv)
+      lift $ env.typeEnv .= MA.union dts (en ^. typeEnv)
+
+      -- declare expressions
+      g <- lift $ sequence [SE.toList <$> fvsExpr e >>= (\fs -> pure ((n, (e, t)), n, fs)) | (n, (e, t)) <- binds]
+      let iss = fmap GR.flattenSCC . GR.stronglyConnComp $ g
+      go iss
+        where
+          go :: [[(Name, (Expr, Maybe Type))]] -> Interpret ()
+          go [] = pure ()
+          go (bs:bss) = do
+            en <- lift $ use env
+            freshEnv <- MA.fromList <$> traverse (\(n, _) -> (fresh <&> generalize) <&> (n,)) bs
+            ((tenv, venv), _) <- lift $ evalRWST
+              (do
+                  (answers, vs) <- L.unzip <$> forM bs (\(n, (e, t)) -> do
+                    (t', cs) <- inferExpr e
+                    (v,_) <- lift $ evalRWST (compile e) defaultSituation (initialState & #venv .~ en ^. valEnv)
+                    case t of
+                      Just t'' -> pure ((t', EqConst t' t'': cs), (n, v))
+                      Nothing  -> pure ((t', cs), (n, v))
+                      )
+                  su <- solve (mconcat $ fmap (^. _2) answers)
+                  pure ( MA.fromList $ zipWith (\b s -> (b ^. _1, s)) bs $ fmap (\(t, _) -> generalize (apply su t)) answers
+                       , MA.fromList vs
+                       )
+
+              ) (MA.union (en ^. typeEnv) freshEnv) (en ^. freshVar)
+            lift $ env.typeEnv .= MA.union tenv (en ^. typeEnv)
+            lift $ env.valEnv .= MA.union venv (en ^. valEnv)
+            go bss
+
 
     Left e ->
       outputStrLn $ show e
 
+-- | Return a fresh type value.
+fresh :: Interpret Type
+fresh = do
+  n <- lift . use $ env.freshVar
+  lift $ env.freshVar += 1
+  pure . TyVar . TV $ show n
+
 -- | Errors for type infering.
-inferError :: InferenceException -> Interpret
+inferError :: InferenceException -> Interpret ()
 inferError = \case
   TypeVariableNotFound v ->
     outputStrLn v
@@ -174,13 +217,13 @@ inferError = \case
     outputStrLn $ show e
 
 -- | Errors for evaluation.
-evalError :: EvalException -> Interpret
+evalError :: EvalException -> Interpret ()
 evalError = \case
   VariableNotDeclared v->
     outputStrLn $ "variable not declare: " <> v
 
 -- | Loop interpreting.
-loop :: Interpret
+loop :: Interpret ()
 loop = handle (\Interrupt -> loop) $
   getInputLine "> " >>= \case
     Nothing -> pure ()
@@ -212,4 +255,4 @@ main :: IO ()
 main =
    evalStateT
    (runInputT setting (withInterrupt loop)) $
-   ReplState (Env (fmap (view _1) builtins) (view _2 <$> builtins))
+   ReplState (Env (fmap (view _1) builtins) (view _2 <$> builtins) 0)

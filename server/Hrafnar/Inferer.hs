@@ -9,9 +9,15 @@ Maintainer  : REALGLOBE INC.
 module Hrafnar.Inferer
   ( Scheme (..)
   , TEnv
+  , Constraint(..)
+  , Substitutable(..)
   , infer
+  , inferExpr
   , scanDecls
   , dataDeclsToEnv
+  , fvsExpr
+  , solve
+  , generalize
   ) where
 
 import           Hrafnar.Annotation

@@ -28,7 +28,7 @@ ev s =
 spec :: Spec
 spec = do
 
-  describe "basic operations" $
+  describe "basic operations" $ do
 
     context "if" $
 
@@ -41,6 +41,16 @@ spec = do
           `shouldBe`
           VInt 1
 
+    context "lambda" $
+
+      it "apply" $ do
+        pending
+        ev
+          ( "f = \\x -> add 1 x\n" <>
+            "main = f 2"
+          )
+          `shouldBe`
+          VInt 3
   describe "complex operations" $ do
 
     it "partial applying 1" $ ev
@@ -58,6 +68,7 @@ spec = do
        )
       `shouldBe`
       VBool False
+
 
   describe "data constructor" $ do
 
@@ -176,6 +187,19 @@ spec = do
       `shouldBe`
       VInt 3
 
+    it "with lambda" $ do
+      pending
+      ev
+        ( "data Hoge = Foo | Bar\n" <>
+          "f =\n" <>
+          "  \\x ->\n" <>
+          "    case x of\n" <>
+          "      Foo -> 0\n" <>
+          "      Bar -> 1\n" <>
+          "main = f Foo"
+        )
+        `shouldBe`
+        VInt 0
 
   describe "evalMain" $
 

@@ -179,7 +179,7 @@ lambda = do
 
 -- | "let ~ in ~" expression. Available with indent.
 --   TODO: Use indent level like lambda expression.
---         This implementation is little bit comlecated.
+--         This implementation is little bit complecated.
 letExpr :: Parser Expr
 letExpr =
   let
@@ -272,15 +272,17 @@ term = literal <|> try var <|> lambda <|> parens expr
 --   This syntax has "Left recursion".
 apply :: Parser Expr
 apply = do
+  start <- getSourcePos
   t <- term
-  loop t
+  loop start t
   where
-    loop e = try (loop' e) <|> pure e
-    loop' lhs = do
+    loop s e = try (loop' s e) <|> pure e
+    loop' s lhs = do
       pos <- getSourcePos
       op <- lexeme $ pure (\e1 e2 -> At (SrcPos pos) (Apply e1 e2))
+      Lx.indentGuard sc GT (sourceColumn s)
       rhs <- term
-      loop $ op lhs rhs
+      loop s $ op lhs rhs
 
 -- | Expression.
 expr :: Parser Expr
@@ -347,7 +349,7 @@ decl :: Parser Decl
 decl = try exprDecl <|> try typeAnno <|> dataDecl
 
 topLevel :: Parser [Decl]
-topLevel = catMaybes <$> some (try (Just <$> decl) <|> try (Just <$> decl <* newline) <|> newline $> Nothing)
+topLevel = catMaybes <$> some (try (Just <$> decl) <|> try (Just <$> decl <* newline) <|> newline $> Nothing) <* eof
 
 exprParser :: Parser Expr
 exprParser = expr

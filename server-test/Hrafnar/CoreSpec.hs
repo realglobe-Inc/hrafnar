@@ -188,7 +188,6 @@ spec = do
       VInt 3
 
     it "with lambda" $ do
-      pending
       ev
         ( "data Hoge = Foo | Bar\n" <>
           "f =\n" <>

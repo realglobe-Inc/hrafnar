@@ -187,7 +187,7 @@ spec = do
       `shouldBe`
       VInt 3
 
-    it "with lambda" $ do
+    it "with lambda" $
       ev
         ( "data Hoge = Foo | Bar\n" <>
           "f =\n" <>

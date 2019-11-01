@@ -44,6 +44,8 @@ import           Control.Exception.Safe
 import           Control.Lens           hiding (Const, Context, List)
 import           Control.Monad.RWS
 import           Data.Extensible        hiding (State)
+import qualified Data.List as L
+import Data.Foldable (foldlM)
 import qualified Data.Map               as MA
 --import           Debug.Trace
 
@@ -121,13 +123,64 @@ compile (At _ expr) = compile' expr
       Do exps -> traverse compile exps >>= \case
         [] -> pure $ VTuple []
         xs -> pure $ last xs
-      Case expr pats -> liftA2 VCase (compile expr) (traverse compilePat pats)
+      Case expr pats -> do
+        v <- compile expr
+        compilePat v pats
 
     compileLit :: Lit -> Eval Value
     compileLit (Bool b)     = pure $ VBool b
     compileLit (Int i)      = pure $ VInt i
     compileLit (Tuple exps) = VTuple <$> traverse compile exps
     compileLit _            = throw FailCompileLit
+
+
+    compilePat :: Value -> [(Pat, Expr)] -> Eval Value
+    compilePat v [(p, expr)] = do
+      let (_, sbst) = eqPattern v p
+      lastBranch <- compile expr
+      pure $ bindInCase sbst lastBranch
+    compilePat v ((p, expr):rest) = do
+      let (isMatch, sbst) = eqPattern v p
+      thenBranch <- compile expr
+      elseBranch <- compilePat v rest
+      pure $ VApp (VApp (VApp if_ isMatch) (bindInCase sbst thenBranch)) elseBranch
+
+    bindInCase :: [(String, Value)] -> Value -> Value
+    bindInCase [] v = v
+    bindInCase [(n, v')] v = VApp (abstract n v) v'
+    bindInCase ((n, v'):rest) v = VApp (abstract n (bindInCase rest v)) v'
+
+
+if_ :: Value
+if_ = VLam $ \(VBool b) -> VLam $ \x -> VLam $ \y -> if b then x else y
+
+eqPattern :: Value -> Pat -> (Value, [(String, Value)])
+eqPattern v pat = eqPattern' (v, pat)
+  where
+    eqPattern' :: (Value, Pat) -> (Value, [(String, Value)])
+    eqPattern' (v, (At _ p)) = case p of
+      PVar n -> (VBool True, [(n, v)])
+      PLit (Int i)-> (eq_ (VInt i) v , [])
+      PLit (Bool b) -> (eq_ (VBool b) v , [])
+      PLit (Char c ) -> (eq_ (VChar c) v, [])
+      PLit (String s) -> (eq_ (VString s) v, [])
+      PWildcard -> (VBool True, [])
+      PCon pname pats ->
+        foldl (accumlate v) (VBool True, []) $ zip [0..] pats
+      _ -> (VBool False, [])
+    accumlate v (isMatch, sbst) (index, pat) =
+      let (isMatch', sbst') = eqPattern' (VApp (getConsParamByIndex index) v, pat) in (and_ isMatch isMatch', sbst <> sbst')
+
+eq_ :: Value -> Value -> Value
+eq_ v1 v2 = VApp (VApp (VVar "eq") v1) v2
+
+and_ :: Value -> Value -> Value
+and_ v1 v2 = VApp (VApp f v1) v2
+  where
+    f = VLam $ \(VBool b1) -> VLam $ \(VBool b2) -> VBool (b1 && b2)
+
+getConsParamByIndex :: Int -> Value
+getConsParamByIndex n = VLam $ \(VCon _ values) -> values !! n
 
 
 compileData :: DataDecl -> [(Name, Value)]
@@ -172,7 +225,6 @@ combS f = VApp (VApp c f)
   where
     c = VLam $ \f' -> VLam $ \g -> VLam $ \x -> f'!x!(g!x)
 
--- | apply Value to Value(VLam)
 infixl 0 !
 (!) :: Value -> Value -> Value
 VLam f ! x = f x
@@ -192,43 +244,7 @@ link (VVar name) = MA.lookup name <$> gets (view #venv) >>= \case
 link (VEff ef) = do
   tell $ Endo (\(c, efs) -> (c, ef : efs))
   pure $ VTuple []
-link (VCase v pats) = do
-  v' <- link v
-  consumePats v' pats
 link e = pure e
-
-consumePats :: Value -> [(VPat, Value)] -> Eval Value
-consumePats _ [] = throwString "There is no matched pattern" -- temp error
-consumePats value ((pat, patv):xs) = do
-  let (isMatch, sbst) = solve pat value []
-  if isMatch
-    then
-      let f (n, v') acc = VApp (abstract n acc) v' in
-      link $ foldr f patv (reverse sbst)
-    else consumePats value xs
-  where
-    conName (VCon n _) = n
-    conValues (VCon _ vs) = vs
-    -- |
-    -- judge whether given pattern matches given value
-    -- and return local variable name and correspondsant value
-    solve :: VPat -> Value -> [(String, Value)] -> (Bool, [(String, Value)])
-    solve pat v acc = case pat of
-      VPVar n       -> (True, (n, v) : acc)
-      VPCon n pats' | n == conName v ->
-        let f (p, v) (isMatch, sbst) =
-              let (isMatch', sbst') = solve p v sbst in (isMatch && isMatch', sbst')
-        in
-        foldr f (True, acc) (zip pats' $ conValues v)
-      VPInt i | VInt i == v -> (True, acc)
-      VPBool b | VBool b == v -> (True, acc)
-      VPChar c | VChar c == v -> (True, acc)
-      VPString s | VString s == v -> (True, acc)
-      VPTuple _ -> undefined
-      VPList _ -> undefined
-      _             -> (False, acc)
-
-
 
 evalExpr :: Expr -> Eval Value
 evalExpr expr = compile expr >>= link

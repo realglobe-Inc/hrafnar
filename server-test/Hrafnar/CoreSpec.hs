@@ -187,7 +187,7 @@ spec = do
       `shouldBe`
       VInt 3
 
-    it "with lambda" $
+    it "lambda parameter in case expression" $
       ev
         ( "data Hoge = Foo | Bar\n" <>
           "f =\n" <>
@@ -196,6 +196,31 @@ spec = do
           "      Foo -> 0\n" <>
           "      Bar -> 1\n" <>
           "main = f Foo"
+        )
+        `shouldBe`
+        VInt 0
+
+    it "lambda parameter in case branch" $
+      ev
+        ( "data Hoge = Foo | Bar\n" <>
+          "f =\n" <>
+          "  \\x ->\n" <>
+          "    case Foo of\n" <>
+          "      Foo -> x\n" <>
+          "      Bar -> 1\n" <>
+          "main = f 0"
+        )
+        `shouldBe`
+        VInt 0
+
+    it "shadow lambda parameter" $
+      ev
+        ( "data Hoge = Foo Int\n" <>
+          "f =\n" <>
+          "  \\x ->\n" <>
+          "    case x of\n" <>
+          "      Foo x -> x\n" <>
+          "main = f (Foo 0)"
         )
         `shouldBe`
         VInt 0

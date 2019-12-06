@@ -163,7 +163,7 @@ defaultFormatter lev ut str = formatTime ut <> " - [" <> logLevelToBuilder lev <
 formatTime :: UnixTime -> BB.Builder
 formatTime ut =
   let
-    ut' = BB.byteString . unsafePerformIO $ formatUnixTime "%Y-%m-$d %T" ut
+    ut' = BB.byteString . unsafePerformIO $ formatUnixTime "%Y-%m-%d %T" ut
     utMilli = BB.string7 . tail . show $ utMicroSeconds ut `div` 1000 + 1000
   in
     ut' <> "." <> utMilli

@@ -196,12 +196,12 @@ spec = do
   describe "declarations" $ do
 
     context "expression" $ do
-      it "expression delaration" $
+      it "expression declaration" $
         parseDecl "x = 1"
         `shouldParse`
         ExprDecl' "x" (Lit' $ Int' 1)
 
-      it "expression delaration with comments" $
+      it "expression declaration with comments" $
         parseDecl "x{- spam -} = {- spam -} 1 -- spam"
         `shouldParse`
         ExprDecl' "x" (Lit' $ Int' 1)

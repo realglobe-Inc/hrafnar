@@ -184,7 +184,6 @@ spec = do
         )
         `shouldFailWith` errFancy 8 (fancy $ ErrorIndentation GT (mkPos 1) (mkPos 1))
 
-
     context "miscellaneous failures" $
 
       it "reserved keyword" $
@@ -196,12 +195,13 @@ spec = do
   describe "declarations" $ do
 
     context "expression" $ do
-      it "expression delaration" $
+
+      it "expression declaration" $
         parseDecl "x = 1"
         `shouldParse`
         ExprDecl' "x" (Lit' $ Int' 1)
 
-      it "expression delaration with comments" $
+      it "expression declaration with comments" $
         parseDecl "x{- spam -} = {- spam -} 1 -- spam"
         `shouldParse`
         ExprDecl' "x" (Lit' $ Int' 1)
@@ -227,7 +227,6 @@ spec = do
         parseDecl "foo : Int"
         `shouldParse`
         TypeAnno' ["foo"] tyInt
-
 
       it "multi" $
         parseDecl  "foo, bar, baz : String"
@@ -353,7 +352,6 @@ spec = do
           , ExprDecl' "g" (Var' "f")
           ]
 
-
       context "case" $ do
 
         it "before declaration" $
@@ -448,7 +446,7 @@ fromExpr :: Expr -> ExprSrc
 fromExpr (At _ expr) = fromExpr' expr
   where
     fromExpr' (Var n)          = Var' n
-    fromExpr' (Lit l)=         fromLit l
+    fromExpr' (Lit l)          = fromLit l
     fromExpr' (Apply fun args) = Apply' (fromExpr fun) (fromExpr args)
     fromExpr' (Lambda n abst)  = Lambda' n $ fromExpr abst
     fromExpr' (If x y z)       = If' (fromExpr x) (fromExpr y) (fromExpr z)

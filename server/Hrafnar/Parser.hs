@@ -263,7 +263,6 @@ var = do
   pos <- getSourcePos
   pure $ At (SrcPos pos) (Var name)
 
-
 -- | Term.
 term :: Parser Expr
 term = literal <|> try var <|> lambda <|> parens expr
@@ -356,5 +355,3 @@ exprParser = expr
 
 declParser :: Parser Decl
 declParser = decl
-
-

@@ -448,7 +448,7 @@ fromExpr :: Expr -> ExprSrc
 fromExpr (At _ expr) = fromExpr' expr
   where
     fromExpr' (Var n)          = Var' n
-    fromExpr' (Lit l)=         fromLit l
+    fromExpr' (Lit l)          = fromLit l
     fromExpr' (Apply fun args) = Apply' (fromExpr fun) (fromExpr args)
     fromExpr' (Lambda n abst)  = Lambda' n $ fromExpr abst
     fromExpr' (If x y z)       = If' (fromExpr x) (fromExpr y) (fromExpr z)

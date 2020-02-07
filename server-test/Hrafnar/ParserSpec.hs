@@ -17,7 +17,7 @@ spec :: Spec
 spec = do
   describe "expressions" $ do
 
-    context "literal" $
+    context "literal" $ do
 
       context "integer" $
 
@@ -26,6 +26,100 @@ spec = do
           parseExpr "42"
           `shouldParse`
           Lit' (Int' 42)
+
+      context "character" $ do
+
+        context "without escaping" $ do
+
+          it "parse a character" $
+
+            parseExpr "'c'"
+            `shouldParse`
+            Lit' (Char' 'c')
+
+          it "parse a numeric character" $
+
+            parseExpr "'5'"
+            `shouldParse`
+            Lit' (Char' '5')
+
+          it "parse a space" $
+
+            parseExpr "' '"
+            `shouldParse`
+            Lit' (Char' ' ')
+
+          it "fail on a backslash" $
+
+            parseExpr "'\\'"
+            `shouldFailWith`
+            err 3 (ueof <> etok '\'') -- This error means no ending quote mark.
+
+          it "parse a single quote" $
+
+            parseExpr "'''"
+            `shouldParse`
+            Lit' (Char' '\'')
+
+          it "parse a double quote" $
+
+            parseExpr "'\"'"
+            `shouldParse`
+            Lit' (Char' '\"')
+
+          it "fail on a zero length character" $
+
+            parseExpr "''"
+            `shouldFailWith`
+            err 2 (ueof <> etok '\'') -- This error means no ending quote mark.
+            -- NOTE: This error depends on whether HML tries to parse a single
+            -- quote without escaping or not.
+            -- If it did not, the error might be:
+            --     err 1 (utok '\'')
+
+          it "fail on a multiple length character" $
+
+            parseExpr "'ab'"
+            `shouldFailWith`
+            err 2 (utok 'b' <> etok '\'')
+
+        context "with escaping" $ do
+
+          it "parse a special character" $
+
+            parseExpr "'\\n'"
+            `shouldParse`
+            Lit' (Char' '\n')
+
+          it "parse a decimal unicode" $
+
+            parseExpr "'\\74'"
+            `shouldParse`
+            Lit' (Char' 'J')
+
+          it "parse a hexadecimal unicode" $
+
+            parseExpr "'\\x4B'"
+            `shouldParse`
+            Lit' (Char' 'K')
+
+          it "parse a octal unicode" $
+
+            parseExpr "'\\o114'"
+            `shouldParse`
+            Lit' (Char' 'L')
+
+          it "parse a ascii control code abbreviation" $
+
+            parseExpr "'\\LF'"
+            `shouldParse`
+            Lit' (Char' '\n')
+
+          it "parse a caret notation" $
+
+            parseExpr "'\\^J'"
+            `shouldParse`
+            Lit' (Char' '\n')
 
     context "if" $ do
 
@@ -440,6 +534,7 @@ data DeclSrc
 data LitSrc
   = Bool' Bool
   | Int' Int
+  | Char' Char
   | Tuple' [ExprSrc]
   deriving (Show, Eq)
 
@@ -473,6 +568,7 @@ fromExpr (At _ expr) = fromExpr' expr
 
     fromLit (Bool b)      = Lit' . Bool' $ b
     fromLit (Int i)       = Lit' . Int' $ i
+    fromLit (Char c)      = Lit' . Char' $ c
     fromLit (Tuple exprs) = Lit' . Tuple' $ fmap fromExpr exprs
 
     unLit (Lit' l) = l

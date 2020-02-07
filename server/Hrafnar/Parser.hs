@@ -247,13 +247,20 @@ integer f = do
   num <- lexeme Lx.decimal
   pure (f $ Int num)
 
+character :: (Lit -> a) -> Parser a
+character f = do
+  c <- lexeme $ between (char '\'') (char '\'') Lx.charLiteral
+  pure (f $ Char c)
+
 literal :: Parser Expr
 literal = do
   pos <- getSourcePos
-  At (SrcPos pos) <$> integer Lit
+  At (SrcPos pos) <$> noLocated
+  where
+    noLocated = integer Lit <|> character Lit
 
 patternLiteral :: Parser Pat'
-patternLiteral = integer PLit
+patternLiteral = integer PLit <|> character PLit
 
 -- terms
 -- | Variables include data constructors and operators.

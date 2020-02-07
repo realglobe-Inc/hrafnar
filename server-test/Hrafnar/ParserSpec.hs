@@ -184,7 +184,6 @@ spec = do
         )
         `shouldFailWith` errFancy 8 (fancy $ ErrorIndentation GT (mkPos 1) (mkPos 1))
 
-
     context "miscellaneous failures" $
 
       it "reserved keyword" $
@@ -196,6 +195,7 @@ spec = do
   describe "declarations" $ do
 
     context "expression" $ do
+
       it "expression declaration" $
         parseDecl "x = 1"
         `shouldParse`
@@ -227,7 +227,6 @@ spec = do
         parseDecl "foo : Int"
         `shouldParse`
         TypeAnno' ["foo"] tyInt
-
 
       it "multi" $
         parseDecl  "foo, bar, baz : String"
@@ -352,7 +351,6 @@ spec = do
           [ ExprDecl' "f" (Lambda' "x" (Lit' $ Int' 1))
           , ExprDecl' "g" (Var' "f")
           ]
-
 
       context "case" $ do
 

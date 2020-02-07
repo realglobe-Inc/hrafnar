@@ -17,6 +17,16 @@ spec :: Spec
 spec = do
   describe "expressions" $ do
 
+    context "literal" $
+
+      context "integer" $
+
+        it "parse an integer" $
+
+          parseExpr "42"
+          `shouldParse`
+          Lit' (Int' 42)
+
     context "if" $ do
 
       it "parse if" $

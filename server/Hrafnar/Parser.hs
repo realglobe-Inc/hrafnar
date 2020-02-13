@@ -252,15 +252,17 @@ character f = do
   c <- lexeme $ between (char '\'') (char '\'') Lx.charLiteral
   pure (f $ Char c)
 
+literal' :: (Lit -> a) -> Parser a
+literal' f = integer f <|> character f
+-- HACK: don't want to repeat f.
+
 literal :: Parser Expr
 literal = do
   pos <- getSourcePos
-  At (SrcPos pos) <$> noLocated
-  where
-    noLocated = integer Lit <|> character Lit
+  At (SrcPos pos) <$> literal' Lit
 
 patternLiteral :: Parser Pat'
-patternLiteral = integer PLit <|> character PLit
+patternLiteral = literal' PLit
 
 -- terms
 -- | Variables include data constructors and operators.

@@ -183,7 +183,6 @@ spec = do
         `shouldParse`
         If' (Var' "x") (Var' "y") (Var' "z")
 
-
     context "case" $ do
 
       it "simple" $

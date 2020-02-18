@@ -121,6 +121,56 @@ spec = do
             `shouldParse`
             Lit' (Char' '\n')
 
+      context "string" $ do
+
+        it "parse a string which length is 0" $
+
+          parseExpr "\"\""
+          `shouldParse`
+          Lit' (String' "")
+
+        it "parse a string which length is 1" $
+
+          parseExpr "\"s\""
+          `shouldParse`
+          Lit' (String' "s")
+
+        it "parse a string which length is 2 or over" $
+
+          parseExpr "\"st\""
+          `shouldParse`
+          Lit' (String' "st")
+
+        it "parse a string including escaped characters" $
+
+          parseExpr "\" \\n \\74 \\' \\\" \\\\ \""
+          `shouldParse`
+          Lit' (String' " \n J ' \" \\ ")
+
+        it "parse single quotes without escaping" $
+
+          parseExpr "\"single quotes -> ''\""
+          `shouldParse`
+          Lit' (String' "single quotes -> ''")
+
+        it "fail on double quotes without escaping" $
+
+          parseExpr "\"a double quote -> \"\""
+          `shouldFailWith`
+          err 20 (utok '"' <> eeof)
+
+        it "parse shortest strings" $
+          -- HACK: depending on `Apply` context
+
+          -- right: 2 texts: [How are you?] and [I am fine!]
+          -- wrong: 1 text: [How are you?" "I am fine!]
+          parseExpr "f \"How are you?\" \"I am fine!\""
+          `shouldParse`
+          Apply' (Apply' (Var' "f")
+                         (Lit' $ String' "How are you?")
+                 )
+                 (Lit' $ String' "I am fine!")
+
     context "if" $ do
 
       it "parse if" $
@@ -535,6 +585,7 @@ data LitSrc
   = Bool' Bool
   | Int' Int
   | Char' Char
+  | String' String
   | Tuple' [ExprSrc]
   deriving (Show, Eq)
 
@@ -569,6 +620,7 @@ fromExpr (At _ expr) = fromExpr' expr
     fromLit (Bool b)      = Lit' . Bool' $ b
     fromLit (Int i)       = Lit' . Int' $ i
     fromLit (Char c)      = Lit' . Char' $ c
+    fromLit (String s)    = Lit' . String' $ s
     fromLit (Tuple exprs) = Lit' . Tuple' $ fmap fromExpr exprs
 
     unLit (Lit' l) = l

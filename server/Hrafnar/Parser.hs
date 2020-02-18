@@ -252,8 +252,14 @@ character f = do
   c <- lexeme $ between (char '\'') (char '\'') Lx.charLiteral
   pure (f $ Char c)
 
+-- NOTE: name "string" is used by Text.Megaparsec.Char.string
+stringLiteral :: (Lit -> a) -> Parser a
+stringLiteral f = do
+  s <- lexeme $ char '\"' *> manyTill Lx.charLiteral (char '\"')
+  pure (f $ String s)
+
 literal' :: (Lit -> a) -> Parser a
-literal' f = integer f <|> character f
+literal' f = integer f <|> character f <|> stringLiteral f
 -- HACK: don't want to repeat f.
 
 literal :: Parser Expr

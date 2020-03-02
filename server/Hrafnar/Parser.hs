@@ -242,18 +242,32 @@ caseExpr = Lx.indentBlock scn parser
       pure $ PCon con params
 
 -- literatures
-integer :: (Lit -> a) -> Parser a
-integer f = do
+intLit :: (Lit -> a) -> Parser a
+intLit f = do
   num <- lexeme Lx.decimal
   pure (f $ Int num)
+
+charLit :: (Lit -> a) -> Parser a
+charLit f = do
+  c <- lexeme $ between (char '\'') (char '\'') Lx.charLiteral
+  pure (f $ Char c)
+
+stringLit :: (Lit -> a) -> Parser a
+stringLit f = do
+  s <- lexeme $ char '\"' *> manyTill Lx.charLiteral (char '\"')
+  pure (f $ String s)
+
+literal' :: (Lit -> a) -> Parser a
+literal' f = intLit f <|> charLit f <|> stringLit f
+-- HACK: don't want to repeat f.
 
 literal :: Parser Expr
 literal = do
   pos <- getSourcePos
-  At (SrcPos pos) <$> integer Lit
+  At (SrcPos pos) <$> literal' Lit
 
 patternLiteral :: Parser Pat'
-patternLiteral = integer PLit
+patternLiteral = literal' PLit
 
 -- terms
 -- | Variables include data constructors and operators.

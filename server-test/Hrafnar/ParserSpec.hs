@@ -110,7 +110,7 @@ spec = do
             `shouldParse`
             Lit' (Char' 'L')
 
-          it "parse a ascii control code abbreviation" $
+          it "parse an ascii control code abbreviation" $
 
             parseExpr [rawS|'\LF'|]
             `shouldParse`

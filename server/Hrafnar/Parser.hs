@@ -242,24 +242,23 @@ caseExpr = Lx.indentBlock scn parser
       pure $ PCon con params
 
 -- literatures
-integer :: (Lit -> a) -> Parser a
-integer f = do
+intLit :: (Lit -> a) -> Parser a
+intLit f = do
   num <- lexeme Lx.decimal
   pure (f $ Int num)
 
-character :: (Lit -> a) -> Parser a
-character f = do
+charLit :: (Lit -> a) -> Parser a
+charLit f = do
   c <- lexeme $ between (char '\'') (char '\'') Lx.charLiteral
   pure (f $ Char c)
 
--- NOTE: name "string" is used by Text.Megaparsec.Char.string
-stringLiteral :: (Lit -> a) -> Parser a
-stringLiteral f = do
+stringLit :: (Lit -> a) -> Parser a
+stringLit f = do
   s <- lexeme $ char '\"' *> manyTill Lx.charLiteral (char '\"')
   pure (f $ String s)
 
 literal' :: (Lit -> a) -> Parser a
-literal' f = integer f <|> character f <|> stringLiteral f
+literal' f = intLit f <|> charLit f <|> stringLit f
 -- HACK: don't want to repeat f.
 
 literal :: Parser Expr

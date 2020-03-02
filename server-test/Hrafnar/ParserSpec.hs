@@ -153,12 +153,6 @@ spec = do
           `shouldParse`
           Lit' (String' "single quotes -> ''")
 
-        it "fail on double quotes without escaping" $
-
-          parseExpr "\"a double quote -> \"\""
-          `shouldFailWith`
-          err 20 (utok '"' <> eeof)
-
         it "parse shortest strings" $
           -- HACK: depending on `Apply` context
 

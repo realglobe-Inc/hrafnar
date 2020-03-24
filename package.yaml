@@ -17,6 +17,10 @@ description:         Please see the README on GitHub at <https://github.com/real
 library:
   source-dirs: server
 
+internal-libraries:
+  hrafnar-util:
+    source-dirs: util
+
 dependencies:
 - base >= 4.7 && < 5
 
@@ -47,6 +51,7 @@ dependencies:
 - servant
 - servant-server
 - stm
+- template-haskell
 - time
 - tls
 - transformers
@@ -77,6 +82,7 @@ default-extensions:
 - MultiParamTypeClasses
 - OverloadedLabels
 - OverloadedStrings
+- QuasiQuotes
 - RankNTypes
 - RecordWildCards
 - PolyKinds
@@ -124,6 +130,7 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - hrafnar
+    - hrafnar-util
     - hspec
     - hspec-megaparsec
     - hspec-wai

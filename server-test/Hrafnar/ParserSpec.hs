@@ -54,35 +54,35 @@ spec = do
 
             parseExpr [rawS|'\'|]
             `shouldFailWith`
-            err 3 (ueof <> etok '\'') -- This error means no ending quote mark.
+            err 3 (ueof <> etok [rawC|'|]) -- This error means no ending quote mark.
 
           it "parse a single quote" $
 
             parseExpr [rawS|'''|]
             `shouldParse`
-            Lit' (Char' '\'')
+            Lit' (Char' [rawC|'|])
 
           it "parse a double quote" $
 
             parseExpr [rawS|'"'|]
             `shouldParse`
-            Lit' (Char' '\"')
+            Lit' (Char' [rawC|"|])
 
           it "fail on a zero length character" $
 
             parseExpr [rawS|''|]
             `shouldFailWith`
-            err 2 (ueof <> etok '\'') -- This error means no ending quote mark.
+            err 2 (ueof <> etok [rawC|'|]) -- This error means no ending quote mark.
             -- NOTE: This error depends on whether HML tries to parse a single
             -- quote without escaping or not.
             -- If it did not, the error might be:
-            --     err 1 (utok '\'')
+            --     err 1 (utok [rawC|'|])
 
           it "fail on a multiple length character" $
 
             parseExpr [rawS|'ab'|]
             `shouldFailWith`
-            err 2 (utok 'b' <> etok '\'')
+            err 2 (utok 'b' <> etok [rawC|'|])
 
         context "with escaping" $ do
 

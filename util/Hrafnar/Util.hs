@@ -21,6 +21,9 @@ rawS = genQQ id
 
 -- raw char
 rawC :: QuasiQuoter
-rawC = genQQ head
--- HACK: `head` does not raise an error when a given string is more than
--- 1 charcter. It smells bad.
+rawC = genQQ toChar
+  where
+    toChar :: String -> Char
+    toChar [] = error "no character"
+    toChar [x] = x
+    toChar (_:_) = error "multiple characters"

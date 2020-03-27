@@ -6,6 +6,7 @@ import           Hrafnar.Builtin
 import           Hrafnar.Exception
 import           Hrafnar.Parser
 import           Hrafnar.Types
+import           Hrafnar.Util
 
 import           Test.Hspec
 import           Test.Hspec.Megaparsec
@@ -33,91 +34,91 @@ spec = do
 
           it "parse a character" $
 
-            parseExpr "'c'"
+            parseExpr [rawS|'c'|]
             `shouldParse`
             Lit' (Char' 'c')
 
           it "parse a numeric character" $
 
-            parseExpr "'5'"
+            parseExpr [rawS|'5'|]
             `shouldParse`
             Lit' (Char' '5')
 
           it "parse a space" $
 
-            parseExpr "' '"
+            parseExpr [rawS|' '|]
             `shouldParse`
             Lit' (Char' ' ')
 
           it "fail on a backslash" $
 
-            parseExpr "'\\'"
+            parseExpr [rawS|'\'|]
             `shouldFailWith`
-            err 3 (ueof <> etok '\'') -- This error means no ending quote mark.
+            err 3 (ueof <> etok [rawC|'|]) -- This error means no ending quote mark.
 
           it "parse a single quote" $
 
-            parseExpr "'''"
+            parseExpr [rawS|'''|]
             `shouldParse`
-            Lit' (Char' '\'')
+            Lit' (Char' [rawC|'|])
 
           it "parse a double quote" $
 
-            parseExpr "'\"'"
+            parseExpr [rawS|'"'|]
             `shouldParse`
-            Lit' (Char' '\"')
+            Lit' (Char' [rawC|"|])
 
           it "fail on a zero length character" $
 
-            parseExpr "''"
+            parseExpr [rawS|''|]
             `shouldFailWith`
-            err 2 (ueof <> etok '\'') -- This error means no ending quote mark.
+            err 2 (ueof <> etok [rawC|'|]) -- This error means no ending quote mark.
             -- NOTE: This error depends on whether HML tries to parse a single
             -- quote without escaping or not.
             -- If it did not, the error might be:
-            --     err 1 (utok '\'')
+            --     err 1 (utok [rawC|'|])
 
           it "fail on a multiple length character" $
 
-            parseExpr "'ab'"
+            parseExpr [rawS|'ab'|]
             `shouldFailWith`
-            err 2 (utok 'b' <> etok '\'')
+            err 2 (utok 'b' <> etok [rawC|'|])
 
         context "with escaping" $ do
 
           it "parse a special character" $
 
-            parseExpr "'\\n'"
+            parseExpr [rawS|'\n'|]
             `shouldParse`
             Lit' (Char' '\n')
 
           it "parse a decimal unicode" $
 
-            parseExpr "'\\74'"
+            parseExpr [rawS|'\74'|]
             `shouldParse`
             Lit' (Char' 'J')
 
           it "parse a hexadecimal unicode" $
 
-            parseExpr "'\\x4B'"
+            parseExpr [rawS|'\x4B'|]
             `shouldParse`
             Lit' (Char' 'K')
 
           it "parse a octal unicode" $
 
-            parseExpr "'\\o114'"
+            parseExpr [rawS|'\o114'|]
             `shouldParse`
             Lit' (Char' 'L')
 
-          it "parse a ascii control code abbreviation" $
+          it "parse an ascii control code abbreviation" $
 
-            parseExpr "'\\LF'"
+            parseExpr [rawS|'\LF'|]
             `shouldParse`
             Lit' (Char' '\n')
 
           it "parse a caret notation" $
 
-            parseExpr "'\\^J'"
+            parseExpr [rawS|'\^J'|]
             `shouldParse`
             Lit' (Char' '\n')
 
@@ -125,31 +126,31 @@ spec = do
 
         it "parse a string which length is 0" $
 
-          parseExpr "\"\""
+          parseExpr [rawS|""|]
           `shouldParse`
           Lit' (String' "")
 
         it "parse a string which length is 1" $
 
-          parseExpr "\"s\""
+          parseExpr [rawS|"s"|]
           `shouldParse`
           Lit' (String' "s")
 
         it "parse a string which length is 2 or over" $
 
-          parseExpr "\"st\""
+          parseExpr [rawS|"st"|]
           `shouldParse`
           Lit' (String' "st")
 
         it "parse a string including escaped characters" $
 
-          parseExpr "\" \\n \\74 \\' \\\" \\\\ \""
+          parseExpr [rawS|" \n \74 \' \" \\ "|]
           `shouldParse`
           Lit' (String' " \n J ' \" \\ ")
 
         it "parse single quotes without escaping" $
 
-          parseExpr "\"single quotes -> ''\""
+          parseExpr [rawS|"single quotes -> ''"|]
           `shouldParse`
           Lit' (String' "single quotes -> ''")
 
@@ -158,7 +159,7 @@ spec = do
 
           -- right: 2 texts: [How are you?] and [I am fine!]
           -- wrong: 1 text: [How are you?" "I am fine!]
-          parseExpr "f \"How are you?\" \"I am fine!\""
+          parseExpr [rawS|f "How are you?" "I am fine!"|]
           `shouldParse`
           Apply' (Apply' (Var' "f")
                          (Lit' $ String' "How are you?")

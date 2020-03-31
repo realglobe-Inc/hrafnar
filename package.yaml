@@ -87,6 +87,7 @@ default-extensions:
 - RecordWildCards
 - PolyKinds
 - ScopedTypeVariables
+- TemplateHaskell
 - TupleSections
 - TypeApplications
 - TypeFamilies
@@ -137,3 +138,11 @@ tests:
     - smallcheck-series
     - case-insensitive
     - wai-extra
+
+  util-test:
+    main:                Main.hs
+    source-dirs:         util-test
+    dependencies:
+      - hrafnar-util
+      - hspec
+      - th-test-utils

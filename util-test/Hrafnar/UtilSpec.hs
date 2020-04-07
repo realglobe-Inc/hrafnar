@@ -16,11 +16,11 @@ spec = do
 
       [rawC|a|] `shouldBe` 'a'
 
-    it "can interpret a single quote without any escaping" $
+    it "interpret a single quote without any escaping" $
 
       [rawC|'|] `shouldBe` '\''
 
-    it "can interpret a back-slash without any escaping" $
+    it "interpret a back-slash without any escaping" $
 
       [rawC|\|] `shouldBe` '\\'
 
@@ -42,10 +42,10 @@ spec = do
 
       [rawS|abc|] `shouldBe` "abc"
 
-    it "can interpret a double quote without any escaping" $
+    it "interpret a double quote without any escaping" $
 
       [rawS|"|] `shouldBe` "\""
 
-    it "can interpret a back-slash without any escaping" $
+    it "interpret a back-slash without any escaping" $
 
       [rawS|\|] `shouldBe` "\\"

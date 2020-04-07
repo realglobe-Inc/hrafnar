@@ -14,5 +14,6 @@ extra-deps:
 - req-2.0.1@sha256:a677b3cb7534e101d2af86e6d12ae94cec57067314763fd2c89a6bc51a6d2fab
 - retry-0.8.0.0@sha256:319a0586876d43622bfe9406fad067adf0b4e591d125ad960bcc405237cc28f5
 - smallcheck-series-0.6.1
+- th-test-utils-1.0.1@sha256:1803d3556474c984cbd195d80b313461a9f170f189eb92da3b1283e6022438b2,2083
 # ghc-options:
   # hrafnar: -Wall -Werror

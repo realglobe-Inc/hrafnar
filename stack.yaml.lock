@@ -74,6 +74,13 @@ packages:
       sha256: 2627ec6bf905f0cade652855e42a1f6e4eab4daafcd6bb693e9749277a832dbd
   original:
     hackage: smallcheck-series-0.6.1
+- completed:
+    hackage: th-test-utils-1.0.1@sha256:1803d3556474c984cbd195d80b313461a9f170f189eb92da3b1283e6022438b2,2083
+    pantry-tree:
+      size: 393
+      sha256: 40a0e535a0d6cfd521749852ff0d4c3add83e36976be0cc3f8facf27a261afd9
+  original:
+    hackage: th-test-utils-1.0.1@sha256:1803d3556474c984cbd195d80b313461a9f170f189eb92da3b1283e6022438b2,2083
 snapshots:
 - completed:
     size: 498186

@@ -49,3 +49,7 @@ spec = do
     it "interpret a back-slash without escape" $
 
       [rawS|\|] `shouldBe` "\\"
+
+    it "interpret \"|~]\" as \"|]\", as an escape rule" $
+
+      [rawS||~]|~~]and|~~~]|] `shouldBe` "|]|~]and|~~]"
